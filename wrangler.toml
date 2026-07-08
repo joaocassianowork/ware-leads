@@ -5,8 +5,4 @@ pages_build_output_dir = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "leads-pipeline"
-database_id = "Cadd45afe-6856-41e1-90b9-9a3e9149ddfa"
-
-[vars]
-# Defina APP_PASSWORD no painel da Cloudflare (Settings > Variables and Secrets)
-# ou localmente em um arquivo .dev.vars com: APP_PASSWORD=suasenha
+database_id = "add45afe-6856-41e1-90b9-9a3e9149ddfa"
