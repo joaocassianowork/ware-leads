@@ -1,0 +1,12 @@
+name = "lead-pipeline"
+compatibility_date = "2025-06-01"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "leads-pipeline"
+database_id = "COLE_AQUI_O_ID_DO_BANCO"
+
+[vars]
+# Defina APP_PASSWORD no painel da Cloudflare (Settings > Variables and Secrets)
+# ou localmente em um arquivo .dev.vars com: APP_PASSWORD=suasenha
