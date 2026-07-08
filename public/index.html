@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Pipeline de Leads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F1F2EF;
+    --surface: #FFFFFF;
+    --ink: #1A1D22;
+    --ink-2: #3A3F45;
+    --muted: #6C7176;
+    --border: #E3E5E0;
+    --border-2: #D5D8D2;
+    --amarelo: #E8A020;
+    --vermelho: #C4534A;
+    --verde: #2E9E5B;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(20,22,26,.06), 0 4px 16px rgba(20,22,26,.05);
+    --font-ui: "Archivo", sans-serif;
+    --font-body: "IBM Plex Sans", sans-serif;
+    --font-mono: "IBM Plex Mono", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; font-size: 14px; }
+  .mono { font-family: var(--font-mono); }
+
+  /* ---------- topbar ---------- */
+  .topbar {
+    background: var(--ink);
+    color: #F4F5F2;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 20px;
+    height: 54px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .wordmark {
+    font-family: var(--font-ui);
+    font-weight: 700;
+    letter-spacing: .14em;
+    font-size: 13px;
+    text-transform: uppercase;
+  }
+  .wordmark span { color: var(--amarelo); }
+  .tabs { display: flex; gap: 4px; }
+  .tab {
+    background: none;
+    border: none;
+    color: #A7ABA6;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+  .tab:hover { color: #fff; }
+  .tab.ativo { color: #fff; background: rgba(255,255,255,.1); }
+  .tab .badge {
+    display: inline-block;
+    background: var(--vermelho);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    border-radius: 20px;
+    padding: 1px 6px;
+    margin-left: 5px;
+    vertical-align: 1px;
+  }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .btn-novo {
+    background: #F4F5F2;
+    color: var(--ink);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 14px;
+  }
+  .btn-novo:hover { background: #fff; }
+  .btn-novo kbd {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    background: rgba(26,29,34,.1);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    color: var(--muted);
+  }
+
+  main { max-width: 1280px; margin: 0 auto; padding: 20px; }
+
+  /* ---------- barra de filtros ---------- */
+  .filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .filtros input[type="search"], .filtros select {
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    padding: 7px 10px;
+    color: var(--ink);
+  }
+  .filtros input[type="search"] { min-width: 200px; }
+  .filtros select:focus, .filtros input:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .filtros .limpar {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: underline;
+  }
+
+  /* ---------- dashboard ---------- */
+  .acao-strip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--amarelo);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .acao-strip h2 {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 10px;
+  }
+  .acao-strip h2 .qtd { color: var(--vermelho); }
+  .acao-lista { display: flex; flex-direction: column; gap: 6px; }
+  .acao-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+  }
+  .acao-item:hover { border-color: var(--border-2); }
+  .acao-item .nome { font-weight: 600; cursor: pointer; }
+  .acao-item .nome:hover { text-decoration: underline; }
+  .acao-item .etapa-chip { font-size: 11px; }
+  .acao-item .dias {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .dias.n1 { color: var(--amarelo); }
+  .dias.n2 { color: var(--vermelho); }
+  .acao-vazio { color: var(--muted); font-size: 13px; }
+
+  .cards-metricas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .metrica {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+  }
+  .metrica .rotulo {
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .metrica .num {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .metrica .sub {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+
+  .paineis {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 12px;
+  }
+  .painel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+  }
+  .painel h3 {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .funil-linha { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .funil-linha .rot { width: 120px; font-size: 12px; font-weight: 500; }
+  .funil-linha .barra-wrap { flex: 1; background: var(--bg); border-radius: 4px; height: 18px; overflow: hidden; }
+  .funil-linha .barra { height: 100%; border-radius: 4px; min-width: 2px; transition: width .4s ease; }
+  .funil-linha .val { font-family: var(--font-mono); font-size: 12px; width: 30px; text-align: right; }
+  .lista-simples { display: flex; flex-direction: column; gap: 8px; }
+  .lista-simples .linha { display: flex; justify-content: space-between; font-size: 13px; }
+  .lista-simples .linha .v { font-family: var(--font-mono); font-weight: 500; }
+  .lista-simples .vazio { color: var(--muted); font-size: 13px; }
+
+  /* ---------- kanban ---------- */
+  .kanban {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    align-items: flex-start;
+    scroll-snap-type: x proximity;
+  }
+  .coluna {
+    background: rgba(255,255,255,.55);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-width: 250px;
+    width: 250px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 190px);
+  }
+  .coluna-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 12px 8px;
+  }
+  .coluna-header .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .coluna-header .titulo {
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .coluna-header .contagem {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  .coluna-soma {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding: 0 12px 8px;
+  }
+  .coluna-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 10px 12px;
+    overflow-y: auto;
+    min-height: 60px;
+    flex: 1;
+  }
+  .coluna.drag-over { outline: 2px dashed var(--ink-2); outline-offset: -4px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid transparent;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 10px 12px;
+    cursor: grab;
+  }
+  .card:active { cursor: grabbing; }
+  .card.arrastando { opacity: .4; }
+  .card.alerta-1 { border-left-color: var(--amarelo); }
+  .card.alerta-2 { border-left-color: var(--vermelho); }
+  .card .c-nome { font-weight: 600; font-size: 14px; cursor: pointer; }
+  .card .c-nome:hover { text-decoration: underline; }
+  .card .c-empresa { color: var(--muted); font-size: 12px; margin-top: 1px; }
+  .card .c-rodape {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .card .c-valor { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+  .card .c-dias {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  .card .c-dias.n1 { color: var(--amarelo); font-weight: 600; }
+  .card .c-dias.n2 { color: var(--vermelho); font-weight: 600; }
+  .chip-resp {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    color: var(--ink-2);
+  }
+  .btn-wa {
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 0;
+    color: #1FAF5F;
+    opacity: .85;
+  }
+  .btn-wa:hover { opacity: 1; transform: scale(1.1); }
+  .btn-wa svg { width: 17px; height: 17px; }
+  .coluna-vazia { color: var(--muted); font-size: 12px; text-align: center; padding: 14px 0; }
+  .motivo-tag { font-size: 11px; color: var(--vermelho); margin-top: 5px; }
+
+  .etapa-chip {
+    display: inline-block;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 9px;
+    color: #fff;
+  }
+
+  /* ---------- modais / drawer ---------- */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20,22,26,.45);
+    display: none;
+    z-index: 100;
+  }
+  .overlay.aberto { display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px 16px; }
+  .overlay.drawer-wrap.aberto { justify-content: flex-end; padding: 0; align-items: stretch; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(20,22,26,.3);
+    width: 100%;
+    max-width: 480px;
+    padding: 22px;
+    max-height: 84vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    font-family: var(--font-ui);
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .campo { margin-bottom: 12px; }
+  .campo label {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .campo input, .campo select, .campo textarea {
+    width: 100%;
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    padding: 9px 11px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .campo input:focus, .campo select:focus, .campo textarea:focus {
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+  .campo textarea { resize: vertical; min-height: 60px; }
+  .linha-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips .chip {
+    border: 1px solid var(--border-2);
+    background: #fff;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .chips .chip.sel {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+  .modal-acoes { display: flex; gap: 10px; margin-top: 18px; }
+  .btn {
+    border-radius: 8px;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 10px 16px;
+    border: 1px solid transparent;
+  }
+  .btn-primario { background: var(--ink); color: #fff; flex: 1; }
+  .btn-primario:hover { background: #000; }
+  .btn-primario:disabled { opacity: .5; cursor: default; }
+  .btn-fantasma { background: none; border-color: var(--border-2); color: var(--ink-2); }
+  .btn-fantasma:hover { background: var(--bg); }
+  .btn-perigo { background: none; border: none; color: var(--vermelho); font-size: 13px; text-decoration: underline; padding: 8px 0; }
+  .aviso-dup {
+    background: #FBF3E4;
+    border: 1px solid #EBD9B4;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .aviso-dup.mostrar { display: block; }
+
+  /* drawer de detalhe */
+  .drawer {
+    background: var(--surface);
+    width: 100%;
+    max-width: 440px;
+    height: 100%;
+    overflow-y: auto;
+    box-shadow: -12px 0 40px rgba(20,22,26,.2);
+    padding: 22px;
+    animation: entra .18s ease;
+  }
+  @keyframes entra { from { transform: translateX(30px); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .drawer { animation: none; }
+    .funil-linha .barra { transition: none; }
+  }
+  .drawer-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 4px; }
+  .drawer-top h2 { font-family: var(--font-ui); font-size: 18px; font-weight: 700; flex: 1; }
+  .fechar-x { background: none; border: none; font-size: 20px; color: var(--muted); line-height: 1; }
+  .drawer .meta-linha { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+  .drawer h4 {
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin: 18px 0 8px;
+  }
+  .notas-lista { display: flex; flex-direction: column; gap: 8px; }
+  .nota {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .nota .nota-meta { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .nota-form { display: flex; gap: 8px; margin-top: 8px; }
+  .nota-form input { flex: 1; border: 1px solid var(--border-2); border-radius: 8px; padding: 8px 10px; }
+  .acoes-lead { display: flex; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
+  .btn-wa-grande {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #1FAF5F;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 9px 14px;
+    text-decoration: none;
+  }
+  .btn-wa-grande svg { width: 16px; height: 16px; }
+
+  /* login */
+  .login-box {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 30px;
+    width: 100%;
+    max-width: 340px;
+    box-shadow: 0 20px 60px rgba(20,22,26,.3);
+    margin-top: 10vh;
+  }
+  .login-box h1 {
+    font-family: var(--font-ui);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .login-box h1 span { color: var(--amarelo); }
+  .login-box p { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .login-erro { color: var(--vermelho); font-size: 13px; margin-top: 10px; display: none; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+  }
+  .toast.mostrar { opacity: 1; }
+
+  .carregando { color: var(--muted); padding: 30px; text-align: center; }
+
+  @media (max-width: 760px) {
+    .topbar { padding: 0 12px; gap: 10px; }
+    .btn-novo kbd { display: none; }
+    main { padding: 12px; }
+    .paineis { grid-template-columns: 1fr; }
+    .coluna { min-width: 230px; width: 230px; max-height: none; }
+    .filtros input[type="search"] { min-width: 140px; flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar" id="topbar" style="display:none">
+  <div class="wordmark">Pipeline<span>.</span></div>
+  <nav class="tabs">
+    <button class="tab ativo" data-view="dashboard" onclick="trocarView('dashboard')">Dashboard</button>
+    <button class="tab" data-view="kanban" onclick="trocarView('kanban')">Pipeline <span class="badge" id="badgeFollowup" style="display:none"></span></button>
+  </nav>
+  <div class="topbar-right">
+    <button class="btn-novo" onclick="abrirNovoLead()">+ Novo lead <kbd>N</kbd></button>
+  </div>
+</header>
+
+<main id="app" style="display:none">
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="viewDashboard">
+    <div class="filtros">
+      <select id="filtroDias" onchange="carregarStats()">
+        <option value="7">Últimos 7 dias</option>
+        <option value="30" selected>Últimos 30 dias</option>
+        <option value="90">Últimos 90 dias</option>
+        <option value="365">Último ano</option>
+      </select>
+    </div>
+
+    <div class="acao-strip" id="acaoStrip">
+      <h2>Precisa de ação <span class="qtd" id="acaoQtd"></span></h2>
+      <div class="acao-lista" id="acaoLista"><span class="acao-vazio">Nenhum follow-up pendente. Pipeline em dia.</span></div>
+    </div>
+
+    <div class="cards-metricas" id="metricas"></div>
+
+    <div class="paineis">
+      <div class="painel">
+        <h3>Funil atual</h3>
+        <div id="funil"></div>
+      </div>
+      <div class="painel">
+        <h3>Motivos de perda</h3>
+        <div class="lista-simples" id="motivosPerda"></div>
+      </div>
+      <div class="painel">
+        <h3>Origem dos leads</h3>
+        <div class="lista-simples" id="origensPainel"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ KANBAN ============ -->
+  <section id="viewKanban" style="display:none">
+    <div class="filtros">
+      <input type="search" id="fBusca" placeholder="Buscar nome, empresa ou telefone" oninput="filtrarDebounce()" />
+      <select id="fOrigem" onchange="renderKanban()"><option value="">Origem: todas</option></select>
+      <select id="fResp" onchange="renderKanban()"><option value="">Responsável: todos</option></select>
+      <button class="limpar" onclick="limparFiltros()">limpar</button>
+    </div>
+    <div class="kanban" id="kanban"></div>
+  </section>
+
+</main>
+
+<!-- ============ LOGIN ============ -->
+<div class="overlay aberto" id="loginOverlay">
+  <div class="login-box">
+    <h1>Pipeline<span>.</span></h1>
+    <p>Uso interno. Digite a senha da equipe.</p>
+    <div class="campo">
+      <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-primario" style="width:100%" onclick="fazerLogin()">Entrar</button>
+    <div class="login-erro" id="loginErro">Senha incorreta. Tente de novo.</div>
+  </div>
+</div>
+
+<!-- ============ MODAL NOVO LEAD ============ -->
+<div class="overlay" id="modalNovo">
+  <div class="modal">
+    <h2>Novo lead</h2>
+    <div class="aviso-dup" id="avisoDup"></div>
+    <div class="campo">
+      <label for="nNome">Nome *</label>
+      <input id="nNome" placeholder="Nome do contato" autocomplete="off" />
+    </div>
+    <div class="linha-2">
+      <div class="campo">
+        <label for="nTelefone">WhatsApp</label>
+        <input id="nTelefone" placeholder="(18) 99999-9999" inputmode="tel" autocomplete="off" />
+      </div>
+      <div class="campo">
+        <label for="nValor">Valor estimado (R$)</label>
+        <input id="nValor" placeholder="2000" inputmode="decimal" autocomplete="off" />
+      </div>
+    </div>
+    <div class="campo">
+      <label for="nEmpresa">Empresa / escritório</label>
+      <input id="nEmpresa" autocomplete="off" />
+    </div>
+    <div class="campo">
+      <label>Origem</label>
+      <div class="chips" id="nOrigem"></div>
+    </div>
+    <div class="campo">
+      <label>Responsável</label>
+      <div class="chips" id="nResp"></div>
+    </div>
+    <div class="campo">
+      <label for="nNota">Primeira nota (opcional)</label>
+      <textarea id="nNota" placeholder="Contexto rápido: quem indicou, o que ele pediu..."></textarea>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn btn-fantasma" onclick="fecharModal('modalNovo')">Cancelar</button>
+      <button class="btn btn-primario" id="btnSalvarNovo" onclick="salvarNovoLead()">Salvar lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL MOTIVO DE PERDA ============ -->
+<div class="overlay" id="modalPerda">
+  <div class="modal">
+    <h2>Por que perdemos esse lead?</h2>
+    <div class="campo">
+      <label>Motivo</label>
+      <div class="chips" id="pMotivo"></div>
+    </div>
+    <div class="campo">
+      <label for="pObs">Detalhe (opcional)</label>
+      <textarea id="pObs" placeholder="Ex: achou caro, orçou R$ 800 com freelancer"></textarea>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn btn-fantasma" onclick="cancelarPerda()">Cancelar</button>
+      <button class="btn btn-primario" onclick="confirmarPerda()">Marcar como perdido</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DRAWER DETALHE ============ -->
+<div class="overlay drawer-wrap" id="drawerWrap" onclick="if(event.target===this) fecharModal('drawerWrap')">
+  <div class="drawer" id="drawerConteudo"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ================= estado =================
+let CFG = null;
+let LEADS = [];
+let STATS = null;
+let leadPendentePerda = null;   // {id} aguardando motivo
+let novoOrigemSel = null;
+let novoRespSel = null;
+let perdaMotivoSel = null;
+let debounceTimer = null;
+
+const $ = (id) => document.getElementById(id);
+
+// ================= fetch com auth =================
+async function api(caminho, opts = {}) {
+  const res = await fetch(caminho, {
+    headers: { "Content-Type": "application/json" },
+    ...opts,
+  });
+  if (res.status === 401) {
+    $("loginOverlay").classList.add("aberto");
+    throw new Error("401");
+  }
+  return res;
+}
+
+async function fazerLogin() {
+  const senha = $("loginSenha").value;
+  const res = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ senha }),
+  });
+  if (res.ok) {
+    $("loginOverlay").classList.remove("aberto");
+    $("loginErro").style.display = "none";
+    iniciar();
+  } else {
+    $("loginErro").style.display = "block";
+  }
+}
+$("loginSenha").addEventListener("keydown", (e) => { if (e.key === "Enter") fazerLogin(); });
+
+// ================= boot =================
+async function iniciar() {
+  try {
+    const res = await api("/api/config");
+    CFG = await res.json();
+  } catch { return; }
+
+  $("loginOverlay").classList.remove("aberto");
+  $("topbar").style.display = "flex";
+  $("app").style.display = "block";
+
+  montarChips("nOrigem", CFG.origens, (id) => { novoOrigemSel = id; });
+  montarChips("nResp", CFG.responsaveis.map((r) => ({ id: r, label: r })), (id) => { novoRespSel = id; });
+  montarChips("pMotivo", CFG.motivosPerda, (id) => { perdaMotivoSel = id; });
+
+  const selOrigem = $("fOrigem");
+  CFG.origens.forEach((o) => selOrigem.insertAdjacentHTML("beforeend", `<option value="${o.id}">${o.label}</option>`));
+  const selResp = $("fResp");
+  CFG.responsaveis.forEach((r) => selResp.insertAdjacentHTML("beforeend", `<option value="${esc(r)}">${esc(r)}</option>`));
+
+  await Promise.all([carregarLeads(), carregarStats()]);
+}
+
+function montarChips(idContainer, itens, onSel) {
+  const c = $(idContainer);
+  c.innerHTML = "";
+  itens.forEach((item) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.textContent = item.label;
+    b.dataset.id = item.id;
+    b.onclick = () => {
+      const jaSel = b.classList.contains("sel");
+      c.querySelectorAll(".chip").forEach((x) => x.classList.remove("sel"));
+      if (!jaSel) { b.classList.add("sel"); onSel(item.id); }
+      else onSel(null);
+    };
+    c.appendChild(b);
+  });
+}
+
+// ================= helpers =================
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function brl(v) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v || 0);
+}
+function parseUTC(s) {
+  if (!s) return null;
+  return new Date(s.replace(" ", "T") + "Z");
+}
+function diasParado(lead) {
+  const d = parseUTC(lead.status_alterado_em);
+  if (!d) return 0;
+  return (Date.now() - d.getTime()) / 86400000;
+}
+function nivelAlerta(lead) {
+  const prazo = CFG.followUpDias[lead.status];
+  if (!prazo) return 0;
+  const dias = diasParado(lead);
+  if (dias >= prazo * 2) return 2;
+  if (dias >= prazo) return 1;
+  return 0;
+}
+function etapa(id) { return CFG.etapas.find((e) => e.id === id) || { label: id, cor: "#999" }; }
+function origemLabel(id) { return (CFG.origens.find((o) => o.id === id) || {}).label || id || "—"; }
+function motivoLabel(id) { return (CFG.motivosPerda.find((m) => m.id === id) || {}).label || id || "Outro"; }
+function linkWa(tel) {
+  if (!tel) return null;
+  let d = String(tel).replace(/\D/g, "");
+  if ((d.length === 10 || d.length === 11) && !d.startsWith("55")) d = "55" + d;
+  return "https://wa.me/" + d;
+}
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("mostrar");
+  setTimeout(() => t.classList.remove("mostrar"), 2200);
+}
+function fecharModal(id) { $(id).classList.remove("aberto"); }
+
+const SVG_WA = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8 1-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4 0-.5.2-.8l.4-.5c.1-.2 0-.4 0-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.7 11.4 11.4 0 0 0 4.4 3.9c.6.3 1.1.4 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.4-.3Z"/></svg>';
+
+// ================= navegação =================
+function trocarView(view) {
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("ativo", t.dataset.view === view));
+  $("viewDashboard").style.display = view === "dashboard" ? "block" : "none";
+  $("viewKanban").style.display = view === "kanban" ? "block" : "none";
+  if (view === "dashboard") carregarStats();
+  if (view === "kanban") carregarLeads();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "n" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const tag = document.activeElement.tagName;
+    if (tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") {
+      e.preventDefault();
+      abrirNovoLead();
+    }
+  }
+  if (e.key === "Escape") {
+    ["modalNovo", "modalPerda", "drawerWrap"].forEach((id) => fecharModal(id));
+    if (leadPendentePerda) cancelarPerda();
+  }
+});
+
+// ================= dashboard =================
+async function carregarStats() {
+  const dias = $("filtroDias").value;
+  const res = await api("/api/stats?dias=" + dias);
+  STATS = await res.json();
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const s = STATS;
+  const porStatus = {};
+  s.funil.forEach((f) => { porStatus[f.status] = f; });
+  const prop = porStatus["proposta"] || { qtd: 0, valor: 0 };
+  const emAndamento = ["novo", "contato", "reuniao", "proposta"]
+    .reduce((acc, k) => acc + (porStatus[k]?.qtd || 0), 0);
+
+  $("metricas").innerHTML = `
+    <div class="metrica"><div class="rotulo">Leads novos</div><div class="num">${s.novos}</div><div class="sub">no período</div></div>
+    <div class="metrica"><div class="rotulo">Em andamento</div><div class="num">${emAndamento}</div><div class="sub">no pipeline agora</div></div>
+    <div class="metrica"><div class="rotulo">Propostas abertas</div><div class="num">${prop.qtd}</div><div class="sub">${brl(prop.valor)}</div></div>
+    <div class="metrica"><div class="rotulo">Fechados</div><div class="num" style="color:var(--verde)">${s.fechados.qtd}</div><div class="sub">${brl(s.fechados.valor)}</div></div>
+    <div class="metrica"><div class="rotulo">Conversão</div><div class="num">${s.conversao === null ? "—" : Math.round(s.conversao * 100) + "%"}</div><div class="sub">fechados ÷ decididos</div></div>
+    <div class="metrica"><div class="rotulo">Perdidos</div><div class="num" style="color:var(--vermelho)">${s.perdidos.qtd}</div><div class="sub">no período</div></div>
+  `;
+
+  // funil
+  const max = Math.max(1, ...CFG.etapas.map((e) => porStatus[e.id]?.qtd || 0));
+  $("funil").innerHTML = CFG.etapas.map((e) => {
+    const f = porStatus[e.id] || { qtd: 0 };
+    return `<div class="funil-linha">
+      <div class="rot">${e.label}</div>
+      <div class="barra-wrap"><div class="barra" style="width:${(f.qtd / max) * 100}%;background:${e.cor}"></div></div>
+      <div class="val">${f.qtd}</div>
+    </div>`;
+  }).join("");
+
+  // motivos de perda
+  $("motivosPerda").innerHTML = s.perdidos.motivos.length
+    ? s.perdidos.motivos.map((m) => `<div class="linha"><span>${esc(motivoLabel(m.motivo))}</span><span class="v">${m.qtd}</span></div>`).join("")
+    : '<div class="vazio">Nenhuma perda no período.</div>';
+
+  // origens
+  $("origensPainel").innerHTML = s.origens.length
+    ? s.origens.map((o) => `<div class="linha"><span>${esc(origemLabel(o.origem))}</span><span class="v">${o.qtd} lead${o.qtd > 1 ? "s" : ""} · ${o.fechados} fech.</span></div>`).join("")
+    : '<div class="vazio">Nenhum lead criado no período.</div>';
+
+  // follow-ups
+  const fu = s.followups;
+  $("acaoQtd").textContent = fu.length ? `(${fu.length})` : "";
+  $("badgeFollowup").style.display = fu.length ? "inline-block" : "none";
+  $("badgeFollowup").textContent = fu.length;
+  $("acaoStrip").style.borderLeftColor = fu.some((l) => l.dias_parado >= l.prazo * 2) ? "var(--vermelho)" : (fu.length ? "var(--amarelo)" : "var(--verde)");
+  $("acaoLista").innerHTML = fu.length
+    ? fu.map((l) => {
+        const nivel = l.dias_parado >= l.prazo * 2 ? "n2" : "n1";
+        const et = etapa(l.status);
+        const wa = linkWa(l.telefone);
+        return `<div class="acao-item">
+          <span class="nome" onclick="abrirDetalhe(${l.id})">${esc(l.nome)}</span>
+          <span class="etapa-chip" style="background:${et.cor}">${et.label}</span>
+          ${wa ? `<a class="btn-wa" href="${wa}" target="_blank" rel="noopener" title="Chamar no WhatsApp">${SVG_WA}</a>` : ""}
+          <span class="dias ${nivel}">${Math.floor(l.dias_parado)}d parado</span>
+        </div>`;
+      }).join("")
+    : '<span class="acao-vazio">Nenhum follow-up pendente. Pipeline em dia.</span>';
+}
+
+// ================= kanban =================
+async function carregarLeads() {
+  const res = await api("/api/leads");
+  LEADS = await res.json();
+  renderKanban();
+}
+
+function filtrarDebounce() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(renderKanban, 200);
+}
+
+function limparFiltros() {
+  $("fBusca").value = "";
+  $("fOrigem").value = "";
+  $("fResp").value = "";
+  renderKanban();
+}
+
+function leadsFiltrados() {
+  const q = $("fBusca").value.trim().toLowerCase();
+  const qDig = q.replace(/\D/g, "");
+  const origem = $("fOrigem").value;
+  const resp = $("fResp").value;
+  return LEADS.filter((l) => {
+    if (origem && l.origem !== origem) return false;
+    if (resp && l.responsavel !== resp) return false;
+    if (q) {
+      const alvo = ((l.nome || "") + " " + (l.empresa || "")).toLowerCase();
+      const tel = l.telefone_norm || "";
+      if (!alvo.includes(q) && !(qDig && tel.includes(qDig))) return false;
+    }
+    return true;
+  });
+}
+
+function renderKanban() {
+  const kb = $("kanban");
+  const leads = leadsFiltrados();
+  kb.innerHTML = "";
+
+  CFG.etapas.forEach((et) => {
+    const daEtapa = leads.filter((l) => l.status === et.id);
+    const soma = daEtapa.reduce((a, l) => a + (l.valor || 0), 0);
+
+    const col = document.createElement("div");
+    col.className = "coluna";
+    col.dataset.status = et.id;
+    col.innerHTML = `
+      <div class="coluna-header">
+        <span class="dot" style="background:${et.cor}"></span>
+        <span class="titulo">${et.label}</span>
+        <span class="contagem">${daEtapa.length}</span>
+      </div>
+      <div class="coluna-soma">${soma ? brl(soma) : "&nbsp;"}</div>
+      <div class="coluna-cards"></div>
+    `;
+    const wrap = col.querySelector(".coluna-cards");
+
+    if (!daEtapa.length) {
+      wrap.innerHTML = '<div class="coluna-vazia">Arraste leads pra cá</div>';
+    }
+
+    daEtapa.forEach((l) => {
+      const nivel = nivelAlerta(l);
+      const dias = Math.floor(diasParado(l));
+      const wa = linkWa(l.telefone);
+      const card = document.createElement("div");
+      card.className = "card" + (nivel === 1 ? " alerta-1" : nivel === 2 ? " alerta-2" : "");
+      card.draggable = true;
+      card.dataset.id = l.id;
+      card.innerHTML = `
+        <div class="c-nome" onclick="abrirDetalhe(${l.id})">${esc(l.nome)}</div>
+        ${l.empresa ? `<div class="c-empresa">${esc(l.empresa)}</div>` : ""}
+        ${l.status === "perdido" && l.motivo_perda ? `<div class="motivo-tag">${esc(motivoLabel(l.motivo_perda))}</div>` : ""}
+        <div class="c-rodape">
+          ${l.valor ? `<span class="c-valor">${brl(l.valor)}</span>` : ""}
+          ${l.responsavel ? `<span class="chip-resp">${esc(l.responsavel)}</span>` : ""}
+          ${wa ? `<a class="btn-wa" href="${wa}" target="_blank" rel="noopener" title="Chamar no WhatsApp">${SVG_WA}</a>` : ""}
+          <span class="c-dias ${nivel === 1 ? "n1" : nivel === 2 ? "n2" : ""}" title="Dias nessa etapa">${dias}d</span>
+        </div>
+      `;
+      card.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("text/plain", l.id);
+        card.classList.add("arrastando");
+      });
+      card.addEventListener("dragend", () => card.classList.remove("arrastando"));
+      wrap.appendChild(card);
+    });
+
+    col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("drag-over"); });
+    col.addEventListener("dragleave", () => col.classList.remove("drag-over"));
+    col.addEventListener("drop", (e) => {
+      e.preventDefault();
+      col.classList.remove("drag-over");
+      const id = parseInt(e.dataTransfer.getData("text/plain"), 10);
+      moverLead(id, et.id);
+    });
+
+    kb.appendChild(col);
+  });
+}
+
+async function moverLead(id, novoStatus) {
+  const lead = LEADS.find((l) => l.id === id);
+  if (!lead || lead.status === novoStatus) return;
+
+  if (novoStatus === "perdido") {
+    leadPendentePerda = { id };
+    perdaMotivoSel = null;
+    $("pObs").value = "";
+    $("pMotivo").querySelectorAll(".chip").forEach((c) => c.classList.remove("sel"));
+    $("modalPerda").classList.add("aberto");
+    return;
+  }
+
+  // otimista
+  const anterior = { status: lead.status, status_alterado_em: lead.status_alterado_em };
+  lead.status = novoStatus;
+  lead.status_alterado_em = new Date().toISOString().slice(0, 19).replace("T", " ");
+  renderKanban();
+
+  const res = await api("/api/leads/" + id, { method: "PATCH", body: JSON.stringify({ status: novoStatus }) });
+  if (!res.ok) {
+    Object.assign(lead, anterior);
+    renderKanban();
+    toast("Não foi possível mover o lead");
+  } else {
+    toast(`${lead.nome} → ${etapa(novoStatus).label}`);
+  }
+}
+
+function cancelarPerda() {
+  leadPendentePerda = null;
+  fecharModal("modalPerda");
+}
+
+async function confirmarPerda() {
+  if (!leadPendentePerda) return;
+  const id = leadPendentePerda.id;
+  const body = {
+    status: "perdido",
+    motivo_perda: perdaMotivoSel || "outro",
+    motivo_perda_obs: $("pObs").value.trim() || null,
+  };
+  const res = await api("/api/leads/" + id, { method: "PATCH", body: JSON.stringify(body) });
+  if (res.ok) {
+    const atualizado = await res.json();
+    const i = LEADS.findIndex((l) => l.id === id);
+    if (i >= 0) LEADS[i] = atualizado;
+    toast("Lead marcado como perdido");
+  }
+  cancelarPerda();
+  renderKanban();
+}
+
+// ================= novo lead =================
+function abrirNovoLead() {
+  ["nNome", "nTelefone", "nValor", "nEmpresa", "nNota"].forEach((id) => { $(id).value = ""; });
+  novoOrigemSel = null;
+  novoRespSel = null;
+  $("nOrigem").querySelectorAll(".chip").forEach((c) => c.classList.remove("sel"));
+  $("nResp").querySelectorAll(".chip").forEach((c) => c.classList.remove("sel"));
+  $("avisoDup").classList.remove("mostrar");
+  $("btnSalvarNovo").textContent = "Salvar lead";
+  $("btnSalvarNovo").dataset.force = "";
+  $("modalNovo").classList.add("aberto");
+  setTimeout(() => $("nNome").focus(), 50);
+}
+
+async function salvarNovoLead() {
+  const nome = $("nNome").value.trim();
+  if (!nome) { $("nNome").focus(); return; }
+  const btn = $("btnSalvarNovo");
+  btn.disabled = true;
+
+  const body = {
+    nome,
+    telefone: $("nTelefone").value.trim(),
+    empresa: $("nEmpresa").value.trim(),
+    valor: parseFloat(String($("nValor").value).replace(/\./g, "").replace(",", ".")) || 0,
+    origem: novoOrigemSel || "outro",
+    responsavel: novoRespSel || null,
+    nota: $("nNota").value.trim(),
+  };
+
+  const force = btn.dataset.force === "1" ? "?force=1" : "";
+  const res = await api("/api/leads" + force, { method: "POST", body: JSON.stringify(body) });
+  btn.disabled = false;
+
+  if (res.status === 409) {
+    const d = await res.json();
+    $("avisoDup").innerHTML = `Já existe um lead com esse telefone: <strong>${esc(d.lead.nome)}</strong> (${etapa(d.lead.status).label}). Clique de novo em salvar pra cadastrar mesmo assim.`;
+    $("avisoDup").classList.add("mostrar");
+    btn.textContent = "Cadastrar mesmo assim";
+    btn.dataset.force = "1";
+    return;
+  }
+
+  if (res.ok) {
+    const lead = await res.json();
+    LEADS.push(lead);
+    fecharModal("modalNovo");
+    toast("Lead cadastrado");
+    renderKanban();
+    carregarStats();
+  } else {
+    toast("Erro ao salvar. Confira os campos.");
+  }
+}
+
+// enter salva no modal de novo lead (fora do textarea)
+$("modalNovo").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+    e.preventDefault();
+    salvarNovoLead();
+  }
+});
+
+// ================= detalhe =================
+async function abrirDetalhe(id) {
+  const res = await api("/api/leads/" + id);
+  if (!res.ok) return;
+  const l = await res.json();
+  const et = etapa(l.status);
+  const wa = linkWa(l.telefone);
+  const criado = parseUTC(l.criado_em);
+
+  $("drawerConteudo").innerHTML = `
+    <div class="drawer-top">
+      <h2>${esc(l.nome)}</h2>
+      <button class="fechar-x" onclick="fecharModal('drawerWrap')" aria-label="Fechar">×</button>
+    </div>
+    <div class="meta-linha">
+      <span class="etapa-chip" style="background:${et.cor}">${et.label}</span>
+      &nbsp;·&nbsp; criado em ${criado ? criado.toLocaleDateString("pt-BR") : "—"}
+      &nbsp;·&nbsp; <span class="mono">${Math.floor(diasParado(l))}d</span> nessa etapa
+    </div>
+
+    ${l.status === "perdido" ? `<div class="aviso-dup mostrar">Perdido: <strong>${esc(motivoLabel(l.motivo_perda))}</strong>${l.motivo_perda_obs ? " — " + esc(l.motivo_perda_obs) : ""}</div>` : ""}
+
+    <div class="acoes-lead">
+      ${wa ? `<a class="btn-wa-grande" href="${wa}" target="_blank" rel="noopener">${SVG_WA} Chamar no WhatsApp</a>` : ""}
+    </div>
+
+    <h4>Dados</h4>
+    <div class="linha-2">
+      <div class="campo"><label for="dTelefone">WhatsApp</label><input id="dTelefone" value="${esc(l.telefone || "")}" /></div>
+      <div class="campo"><label for="dValor">Valor (R$)</label><input id="dValor" value="${l.valor || ""}" inputmode="decimal" /></div>
+    </div>
+    <div class="campo"><label for="dEmpresa">Empresa</label><input id="dEmpresa" value="${esc(l.empresa || "")}" /></div>
+    <div class="campo"><label for="dEmail">E-mail</label><input id="dEmail" value="${esc(l.email || "")}" /></div>
+    <div class="linha-2">
+      <div class="campo"><label for="dOrigem">Origem</label>
+        <select id="dOrigem">${CFG.origens.map((o) => `<option value="${o.id}" ${o.id === l.origem ? "selected" : ""}>${o.label}</option>`).join("")}</select>
+      </div>
+      <div class="campo"><label for="dResp">Responsável</label>
+        <select id="dResp"><option value="">—</option>${CFG.responsaveis.map((r) => `<option ${r === l.responsavel ? "selected" : ""}>${esc(r)}</option>`).join("")}</select>
+      </div>
+    </div>
+    <div class="campo"><label for="dEtapa">Etapa</label>
+      <select id="dEtapa">${CFG.etapas.map((e) => `<option value="${e.id}" ${e.id === l.status ? "selected" : ""}>${e.label}</option>`).join("")}</select>
+    </div>
+    <button class="btn btn-primario" style="width:100%" onclick="salvarDetalhe(${l.id})">Salvar alterações</button>
+
+    <h4>Notas</h4>
+    <div class="nota-form">
+      <input id="dNovaNota" placeholder="Nota rápida com data automática" />
+      <button class="btn btn-fantasma" onclick="addNota(${l.id})">Adicionar</button>
+    </div>
+    <div class="notas-lista" id="dNotas" style="margin-top:10px">${renderNotas(l.notas)}</div>
+
+    <div style="margin-top:22px">
+      <button class="btn-perigo" onclick="excluirLead(${l.id}, '${esc(l.nome).replace(/'/g, "\\'")}')">Excluir lead</button>
+    </div>
+  `;
+  $("drawerWrap").classList.add("aberto");
+  $("dNovaNota").addEventListener("keydown", (e) => { if (e.key === "Enter") addNota(l.id); });
+}
+
+function renderNotas(notas) {
+  if (!notas || !notas.length) return '<div class="vazio" style="color:var(--muted);font-size:13px">Nenhuma nota ainda.</div>';
+  return notas.map((n) => {
+    const d = parseUTC(n.criado_em);
+    return `<div class="nota">${esc(n.texto)}<div class="nota-meta">${d ? d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}${n.autor ? " · " + esc(n.autor) : ""}</div></div>`;
+  }).join("");
+}
+
+async function addNota(id) {
+  const inp = $("dNovaNota");
+  const texto = inp.value.trim();
+  if (!texto) return;
+  const res = await api(`/api/leads/${id}/notas`, { method: "POST", body: JSON.stringify({ texto }) });
+  if (res.ok) {
+    const notas = await res.json();
+    $("dNotas").innerHTML = renderNotas(notas);
+    inp.value = "";
+  }
+}
+
+async function salvarDetalhe(id) {
+  const novaEtapa = $("dEtapa").value;
+  const leadLocal = LEADS.find((l) => l.id === id);
+
+  // mudou pra perdido pelo select? pede motivo
+  if (novaEtapa === "perdido" && leadLocal && leadLocal.status !== "perdido") {
+    fecharModal("drawerWrap");
+    leadPendentePerda = { id };
+    perdaMotivoSel = null;
+    $("pObs").value = "";
+    $("pMotivo").querySelectorAll(".chip").forEach((c) => c.classList.remove("sel"));
+    $("modalPerda").classList.add("aberto");
+    // salva os demais campos antes
+    await patchCampos(id, false);
+    return;
+  }
+
+  await patchCampos(id, true, novaEtapa);
+  fecharModal("drawerWrap");
+  toast("Lead atualizado");
+  await carregarLeads();
+  carregarStats();
+}
+
+async function patchCampos(id, incluirStatus, status) {
+  const body = {
+    telefone: $("dTelefone").value.trim(),
+    valor: parseFloat(String($("dValor").value).replace(/\./g, "").replace(",", ".")) || 0,
+    empresa: $("dEmpresa").value.trim(),
+    email: $("dEmail").value.trim(),
+    origem: $("dOrigem").value,
+    responsavel: $("dResp").value,
+  };
+  if (incluirStatus) body.status = status;
+  await api("/api/leads/" + id, { method: "PATCH", body: JSON.stringify(body) });
+}
+
+async function excluirLead(id, nome) {
+  if (!confirm(`Excluir "${nome}" e todas as notas? Essa ação não tem volta.`)) return;
+  const res = await api("/api/leads/" + id, { method: "DELETE" });
+  if (res.ok) {
+    LEADS = LEADS.filter((l) => l.id !== id);
+    fecharModal("drawerWrap");
+    toast("Lead excluído");
+    renderKanban();
+    carregarStats();
+  }
+}
+
+// ================= start =================
+iniciar();
+</script>
+</body>
+</html>
