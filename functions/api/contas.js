@@ -36,17 +36,20 @@ export async function onRequestPost({ request, env }) {
   } catch {
     return erro("Corpo inválido");
   }
-  if (!b.descricao || !b.valor || !b.vencimento) return erro("Descrição, valor e vencimento são obrigatórios");
   if (!["pagar", "receber"].includes(b.tipo)) return erro("Tipo inválido");
+
+  const descricao = (b.descricao && String(b.descricao).trim()) || "Sem descrição";
+  const vencimento = b.vencimento || new Date().toISOString().slice(0, 10);
+  const valor = Number(b.valor) || 0;
 
   const res = await env.DB.prepare(
     `INSERT INTO contas_pagar_receber (descricao, valor, vencimento, tipo, conta, categoria, status)
      VALUES (?, ?, ?, ?, ?, ?, 'pendente')`
   )
     .bind(
-      String(b.descricao).trim(),
-      Number(b.valor),
-      b.vencimento,
+      descricao,
+      valor,
+      vencimento,
       b.tipo,
       b.conta || "PJ",
       b.categoria || null

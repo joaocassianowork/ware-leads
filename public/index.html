@@ -265,44 +265,45 @@
 
   /* ---------- kanban ---------- */
   .kanban {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
+    display: grid;
+    grid-template-columns: repeat(var(--n-etapas, 6), minmax(0, 1fr));
+    gap: 10px;
     padding-bottom: 16px;
-    align-items: flex-start;
-    scroll-snap-type: x proximity;
+    align-items: start;
+    overflow-x: auto;
   }
   .coluna {
     background: rgba(255,255,255,.55);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    min-width: 250px;
-    width: 250px;
-    flex-shrink: 0;
-    scroll-snap-align: start;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 190px);
   }
   .coluna-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     padding: 12px 12px 8px;
   }
-  .coluna-header .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .coluna-header .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
   .coluna-header .titulo {
     font-family: var(--font-ui);
     font-weight: 700;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: .06em;
+    min-width: 0;
+    line-height: 1.3;
   }
   .coluna-header .contagem {
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--muted);
     margin-left: auto;
+    margin-top: 1px;
+    flex-shrink: 0;
   }
   .coluna-soma {
     font-family: var(--font-mono);
@@ -664,6 +665,11 @@
 
   .carregando { color: var(--muted); padding: 30px; text-align: center; }
 
+  @media (max-width: 1100px) {
+    .kanban { display: flex; overflow-x: auto; align-items: flex-start; }
+    .coluna { min-width: 240px; width: 240px; flex-shrink: 0; }
+  }
+
   @media (max-width: 760px) {
     .sidebar {
       position: static;
@@ -890,7 +896,7 @@
       </div>
       <div class="campo">
         <label for="nValor">Valor estimado (R$)</label>
-        <input id="nValor" placeholder="2000" inputmode="decimal" autocomplete="off" />
+        <input id="nValor" type="number" step="0.01" min="0" placeholder="2000" inputmode="decimal" autocomplete="off" />
       </div>
     </div>
     <div class="campo">
@@ -941,7 +947,7 @@
     <h2 id="modalLancTitulo">Novo lançamento</h2>
     <div class="linha-2">
       <div class="campo"><label for="lData">Data</label><input type="date" id="lData" /></div>
-      <div class="campo"><label for="lValor">Valor (R$)</label><input id="lValor" placeholder="0,00" inputmode="decimal" /></div>
+      <div class="campo"><label for="lValor">Valor (R$)</label><input id="lValor" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal" /></div>
     </div>
     <div class="campo"><label for="lDesc">Descrição *</label><input id="lDesc" placeholder="Ex: Mensalidade cliente João" /></div>
     <div class="linha-2">
@@ -976,7 +982,7 @@
     <h2>Nova conta</h2>
     <div class="campo"><label for="cDesc">Descrição *</label><input id="cDesc" placeholder="Ex: Aluguel do escritório" /></div>
     <div class="linha-2">
-      <div class="campo"><label for="cValor">Valor (R$)</label><input id="cValor" placeholder="0,00" inputmode="decimal" /></div>
+      <div class="campo"><label for="cValor">Valor (R$)</label><input id="cValor" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal" /></div>
       <div class="campo"><label for="cVenc">Vencimento</label><input type="date" id="cVenc" /></div>
     </div>
     <div class="linha-2">
@@ -1000,7 +1006,7 @@
 <div class="overlay" id="modalMeta">
   <div class="modal">
     <h2>Definir meta de receita</h2>
-    <div class="campo"><label for="mValor">Meta mensal (R$)</label><input id="mValor" placeholder="Ex: 25000" inputmode="decimal" /></div>
+    <div class="campo"><label for="mValor">Meta mensal (R$)</label><input id="mValor" type="number" step="0.01" min="0" placeholder="25000" inputmode="decimal" /></div>
     <div class="modal-acoes">
       <button class="btn btn-fantasma" onclick="fecharModal('modalMeta')">Cancelar</button>
       <button class="btn btn-primario" onclick="salvarMeta()">Salvar</button>
@@ -1382,6 +1388,7 @@ function leadsFiltrados() {
 
 function renderKanban() {
   const kb = $("kanban");
+  kb.style.setProperty("--n-etapas", CFG.etapas.length);
   const leads = leadsFiltrados();
   kb.innerHTML = "";
 
@@ -1524,7 +1531,7 @@ async function salvarNovoLead() {
     nome,
     telefone: $("nTelefone").value.trim(),
     empresa: $("nEmpresa").value.trim(),
-    valor: parseFloat(String($("nValor").value).replace(/\./g, "").replace(",", ".")) || 0,
+    valor: parseValorInput($("nValor").value),
     origem: novoOrigemSel || "outro",
     responsavel: novoRespSel || null,
     nota: $("nNota").value.trim(),
@@ -1592,7 +1599,7 @@ async function abrirDetalhe(id) {
     <h4>Dados</h4>
     <div class="linha-2">
       <div class="campo"><label for="dTelefone">WhatsApp</label><input id="dTelefone" value="${esc(l.telefone || "")}" /></div>
-      <div class="campo"><label for="dValor">Valor (R$)</label><input id="dValor" value="${l.valor || ""}" inputmode="decimal" /></div>
+      <div class="campo"><label for="dValor">Valor (R$)</label><input id="dValor" type="number" step="0.01" min="0" value="${l.valor || ""}" inputmode="decimal" /></div>
     </div>
     <div class="campo"><label for="dEmpresa">Empresa</label><input id="dEmpresa" value="${esc(l.empresa || "")}" /></div>
     <div class="campo"><label for="dEmail">E-mail</label><input id="dEmail" value="${esc(l.email || "")}" /></div>
@@ -1671,7 +1678,7 @@ async function salvarDetalhe(id) {
 async function patchCampos(id, incluirStatus, status) {
   const body = {
     telefone: $("dTelefone").value.trim(),
-    valor: parseFloat(String($("dValor").value).replace(/\./g, "").replace(",", ".")) || 0,
+    valor: parseValorInput($("dValor").value),
     empresa: $("dEmpresa").value.trim(),
     email: $("dEmail").value.trim(),
     origem: $("dOrigem").value,
@@ -1724,7 +1731,8 @@ function getMonthRange() {
 }
 
 function parseValorInput(v) {
-  return parseFloat(String(v).replace(/\./g, "").replace(",", ".")) || 0;
+  const n = parseFloat(v);
+  return isNaN(n) || n < 0 ? 0 : n;
 }
 
 function formatDataBR(dateStr) {
@@ -1877,16 +1885,10 @@ function editarLancamento(id) {
 }
 
 async function salvarLancamento() {
-  const descricao = $("lDesc").value.trim();
-  const valor = parseValorInput($("lValor").value);
-  if (!$("lData").value || !valor || !descricao) {
-    toast("Preencha data, valor e descrição");
-    return;
-  }
   const body = {
-    data: $("lData").value,
-    valor,
-    descricao,
+    data: $("lData").value || new Date().toISOString().slice(0, 10),
+    valor: parseValorInput($("lValor").value),
+    descricao: $("lDesc").value.trim() || "Sem descrição",
     tipo: $("lTipoSel").value,
     conta: $("lConta").value,
     categoria: $("lCategoria").value.trim(),
@@ -1964,16 +1966,10 @@ function abrirNovaConta() {
 }
 
 async function salvarConta() {
-  const descricao = $("cDesc").value.trim();
-  const valor = parseValorInput($("cValor").value);
-  if (!descricao || !valor || !$("cVenc").value) {
-    toast("Preencha descrição, valor e vencimento");
-    return;
-  }
   const body = {
-    descricao,
-    valor,
-    vencimento: $("cVenc").value,
+    descricao: $("cDesc").value.trim() || "Sem descrição",
+    valor: parseValorInput($("cValor").value),
+    vencimento: $("cVenc").value || new Date().toISOString().slice(0, 10),
     tipo: $("cTipo").value,
     conta: $("cConta").value,
     categoria: $("cCategoria").value.trim(),

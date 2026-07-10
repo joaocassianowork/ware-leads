@@ -52,22 +52,25 @@ export async function onRequestPost({ request, env }) {
   } catch {
     return erro("Corpo inválido");
   }
-  if (!b.data || !b.descricao || !b.valor) return erro("Data, descrição e valor são obrigatórios");
   if (!["receita", "despesa"].includes(b.tipo)) return erro("Tipo inválido");
+
+  const descricao = (b.descricao && String(b.descricao).trim()) || "Sem descrição";
+  const data = b.data || new Date().toISOString().slice(0, 10);
+  const valor = Number(b.valor) || 0;
 
   const res = await env.DB.prepare(
     `INSERT INTO lancamentos (data, descricao, categoria, canal, conta, tipo, status, valor)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
-      b.data,
-      String(b.descricao).trim(),
+      data,
+      descricao,
       b.categoria || null,
       b.tipo === "receita" ? b.canal || "direto" : null,
       b.conta || "PJ",
       b.tipo,
       b.status || "pago",
-      Number(b.valor)
+      valor
     )
     .run();
 
