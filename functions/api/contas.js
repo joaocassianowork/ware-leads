@@ -1,4 +1,4 @@
-import { json, erro } from "../_shared.js";
+import { json, erro, somarMeses } from "../_shared.js";
 
 // GET /api/contas?conta=&tipo=&status=
 export async function onRequestGet({ request, env }) {
@@ -28,7 +28,7 @@ export async function onRequestGet({ request, env }) {
   return json(results);
 }
 
-// POST /api/contas { descricao, valor, vencimento, tipo, conta, categoria }
+// POST /api/contas { descricao, valor, vencimento, tipo, conta, categoria, repetir_meses? }
 export async function onRequestPost({ request, env }) {
   let b;
   try {
@@ -39,25 +39,29 @@ export async function onRequestPost({ request, env }) {
   if (!["pagar", "receber"].includes(b.tipo)) return erro("Tipo inválido");
 
   const descricao = (b.descricao && String(b.descricao).trim()) || "Sem descrição";
-  const vencimento = b.vencimento || new Date().toISOString().slice(0, 10);
+  const vencimentoBase = b.vencimento || new Date().toISOString().slice(0, 10);
   const valor = Number(b.valor) || 0;
+  const conta = b.conta || "PJ";
+  const categoria = b.categoria || null;
 
-  const res = await env.DB.prepare(
-    `INSERT INTO contas_pagar_receber (descricao, valor, vencimento, tipo, conta, categoria, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'pendente')`
-  )
-    .bind(
-      descricao,
-      valor,
-      vencimento,
-      b.tipo,
-      b.conta || "PJ",
-      b.categoria || null
+  const repetirMeses = Math.min(Math.max(parseInt(b.repetir_meses, 10) || 1, 1), 36);
+  const serieId = repetirMeses > 1 ? `s${Date.now()}${Math.floor(Math.random() * 1000)}` : null;
+
+  let primeiroId = null;
+  for (let i = 0; i < repetirMeses; i++) {
+    const vencimento = i === 0 ? vencimentoBase : somarMeses(vencimentoBase, i);
+    const res = await env.DB.prepare(
+      `INSERT INTO contas_pagar_receber (descricao, valor, vencimento, tipo, conta, categoria, status, serie_id)
+       VALUES (?, ?, ?, ?, ?, ?, 'pendente', ?)`
     )
-    .run();
+      .bind(descricao, valor, vencimento, b.tipo, conta, categoria, serieId)
+      .run();
+    if (i === 0) primeiroId = res.meta.last_row_id;
+  }
 
-  const conta = await env.DB.prepare("SELECT * FROM contas_pagar_receber WHERE id = ?")
-    .bind(res.meta.last_row_id)
-    .first();
-  return json(conta, 201);
+  if (repetirMeses > 1) {
+    return json({ recorrente: true, criados: repetirMeses, primeiroId }, 201);
+  }
+  const conta_ = await env.DB.prepare("SELECT * FROM contas_pagar_receber WHERE id = ?").bind(primeiroId).first();
+  return json(conta_, 201);
 }

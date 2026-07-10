@@ -35,7 +35,21 @@ export async function onRequestPatch({ params, request, env }) {
   return json(conta);
 }
 
-export async function onRequestDelete({ params, env }) {
+// DELETE /api/contas/:id       -> exclui só esta
+// DELETE /api/contas/:id?serie=1 -> exclui esta e as futuras da mesma série recorrente
+export async function onRequestDelete({ params, request, env }) {
+  const serie = new URL(request.url).searchParams.get("serie") === "1";
+
+  if (serie) {
+    const atual = await env.DB.prepare("SELECT * FROM contas_pagar_receber WHERE id = ?").bind(params.id).first();
+    if (atual && atual.serie_id) {
+      const res = await env.DB.prepare(
+        "DELETE FROM contas_pagar_receber WHERE serie_id = ? AND vencimento >= ?"
+      ).bind(atual.serie_id, atual.vencimento).run();
+      return json({ ok: true, excluidos: res.meta.changes });
+    }
+  }
+
   await env.DB.prepare("DELETE FROM contas_pagar_receber WHERE id = ?").bind(params.id).run();
-  return json({ ok: true });
+  return json({ ok: true, excluidos: 1 });
 }

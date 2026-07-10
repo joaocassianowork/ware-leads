@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS lancamentos (
   status TEXT NOT NULL DEFAULT 'pago',
   valor REAL NOT NULL,
   cliente_id INTEGER REFERENCES clientes(id),
+  serie_id TEXT,
   criado_em TEXT NOT NULL DEFAULT (datetime('now')),
   atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -60,6 +61,7 @@ CREATE TABLE IF NOT EXISTS contas_pagar_receber (
   conta TEXT NOT NULL DEFAULT 'PJ',
   categoria TEXT,
   status TEXT NOT NULL DEFAULT 'pendente',
+  serie_id TEXT,
   criado_em TEXT NOT NULL DEFAULT (datetime('now')),
   atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -115,3 +117,5 @@ CREATE INDEX IF NOT EXISTS idx_clientes_indicado_por ON clientes(indicado_por_id
 CREATE INDEX IF NOT EXISTS idx_clientes_aniversario ON clientes(aniversario);
 CREATE INDEX IF NOT EXISTS idx_notas_cliente ON notas_cliente(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_lanc_cliente ON lancamentos(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_lanc_serie ON lancamentos(serie_id);
+CREATE INDEX IF NOT EXISTS idx_contas_serie ON contas_pagar_receber(serie_id);

@@ -39,7 +39,21 @@ export async function onRequestPatch({ params, request, env }) {
   return json(lanc);
 }
 
-export async function onRequestDelete({ params, env }) {
+// DELETE /api/lancamentos/:id       -> exclui só este
+// DELETE /api/lancamentos/:id?serie=1 -> exclui este e os futuros da mesma série recorrente
+export async function onRequestDelete({ params, request, env }) {
+  const serie = new URL(request.url).searchParams.get("serie") === "1";
+
+  if (serie) {
+    const atual = await env.DB.prepare("SELECT * FROM lancamentos WHERE id = ?").bind(params.id).first();
+    if (atual && atual.serie_id) {
+      const res = await env.DB.prepare(
+        "DELETE FROM lancamentos WHERE serie_id = ? AND data >= ?"
+      ).bind(atual.serie_id, atual.data).run();
+      return json({ ok: true, excluidos: res.meta.changes });
+    }
+  }
+
   await env.DB.prepare("DELETE FROM lancamentos WHERE id = ?").bind(params.id).run();
-  return json({ ok: true });
+  return json({ ok: true, excluidos: 1 });
 }

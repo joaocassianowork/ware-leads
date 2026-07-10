@@ -58,6 +58,19 @@ export const CONFIG = {
     { id: "direto", label: "Direto" },
     { id: "outro", label: "Outro" },
   ],
+
+  // Categorias fixas de lançamento/conta (evita "Fixo" vs "fixo" vs "Fixos" bagunçando o dashboard)
+  categorias: [
+    "Fixo",
+    "Variável",
+    "Marketing",
+    "Ferramentas/SaaS",
+    "Impostos",
+    "Folha/Pró-labore",
+    "Comissão parceiro",
+    "Serviços",
+    "Outro",
+  ],
 };
 
 // ---------- helpers ----------
@@ -105,4 +118,16 @@ export async function sessaoValida(request, env) {
   const cookie = lerCookie(request, "sessao");
   if (!cookie) return false;
   return cookie === (await tokenSessao(senha));
+}
+
+// Soma N meses a uma data YYYY-MM-DD, ajustando pro último dia do mês quando necessário
+// (ex: 31/01 + 1 mês = 28/02, não 03/03)
+export function somarMeses(dataStr, n) {
+  const [y, m, d] = dataStr.split("-").map(Number);
+  const alvo = new Date(y, m - 1 + n, 1);
+  const ultimoDia = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate();
+  const dia = Math.min(d, ultimoDia);
+  const mm = String(alvo.getMonth() + 1).padStart(2, "0");
+  const dd = String(dia).padStart(2, "0");
+  return `${alvo.getFullYear()}-${mm}-${dd}`;
 }

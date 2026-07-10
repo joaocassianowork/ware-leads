@@ -1,4 +1,4 @@
-import { json, erro } from "../_shared.js";
+import { json, erro, somarMeses } from "../_shared.js";
 
 // GET /api/lancamentos?conta=&inicio=&fim=&tipo=&status=&canal=&q=
 export async function onRequestGet({ request, env }) {
@@ -48,7 +48,7 @@ export async function onRequestGet({ request, env }) {
   return json(results);
 }
 
-// POST /api/lancamentos { data, descricao, categoria, canal, conta, tipo, status, valor }
+// POST /api/lancamentos { data, descricao, categoria, canal, conta, tipo, status, valor, repetir_meses? }
 export async function onRequestPost({ request, env }) {
   let b;
   try {
@@ -59,28 +59,32 @@ export async function onRequestPost({ request, env }) {
   if (!["receita", "despesa"].includes(b.tipo)) return erro("Tipo inválido");
 
   const descricao = (b.descricao && String(b.descricao).trim()) || "Sem descrição";
-  const data = b.data || new Date().toISOString().slice(0, 10);
+  const dataBase = b.data || new Date().toISOString().slice(0, 10);
   const valor = Number(b.valor) || 0;
+  const categoria = b.categoria || null;
+  const canal = b.tipo === "receita" ? b.canal || "direto" : null;
+  const conta = b.conta || "PJ";
+  const status = b.status || "pago";
+  const clienteId = b.cliente_id || null;
 
-  const res = await env.DB.prepare(
-    `INSERT INTO lancamentos (data, descricao, categoria, canal, conta, tipo, status, valor, cliente_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(
-      data,
-      descricao,
-      b.categoria || null,
-      b.tipo === "receita" ? b.canal || "direto" : null,
-      b.conta || "PJ",
-      b.tipo,
-      b.status || "pago",
-      valor,
-      b.cliente_id || null
+  const repetirMeses = Math.min(Math.max(parseInt(b.repetir_meses, 10) || 1, 1), 36);
+  const serieId = repetirMeses > 1 ? `s${Date.now()}${Math.floor(Math.random() * 1000)}` : null;
+
+  let primeiroId = null;
+  for (let i = 0; i < repetirMeses; i++) {
+    const data = i === 0 ? dataBase : somarMeses(dataBase, i);
+    const res = await env.DB.prepare(
+      `INSERT INTO lancamentos (data, descricao, categoria, canal, conta, tipo, status, valor, cliente_id, serie_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run();
+      .bind(data, descricao, categoria, canal, conta, b.tipo, status, valor, clienteId, serieId)
+      .run();
+    if (i === 0) primeiroId = res.meta.last_row_id;
+  }
 
-  const lanc = await env.DB.prepare("SELECT * FROM lancamentos WHERE id = ?")
-    .bind(res.meta.last_row_id)
-    .first();
+  if (repetirMeses > 1) {
+    return json({ recorrente: true, criados: repetirMeses, primeiroId }, 201);
+  }
+  const lanc = await env.DB.prepare("SELECT * FROM lancamentos WHERE id = ?").bind(primeiroId).first();
   return json(lanc, 201);
 }

@@ -1031,7 +1031,7 @@
       <div class="campo"><label for="lConta">Conta</label><select id="lConta"></select></div>
     </div>
     <div class="linha-2">
-      <div class="campo"><label for="lCategoria">Categoria</label><input id="lCategoria" placeholder="Ex: Serviços, Aluguel..." /></div>
+      <div class="campo"><label for="lCategoria">Categoria</label><select id="lCategoria"></select></div>
       <div class="campo" id="campoCanal"><label for="lCanal">Canal de origem</label><select id="lCanal"></select></div>
     </div>
     <div class="campo"><label for="lCliente">Cliente <span style="text-transform:none;font-weight:400">(opcional)</span></label><select id="lCliente"><option value="">— nenhum —</option></select></div>
@@ -1040,6 +1040,16 @@
         <option value="pago">Pago</option>
         <option value="pendente">Pendente</option>
       </select>
+    </div>
+    <div class="campo" id="campoRepetirLanc">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink)">
+        <input type="checkbox" id="lRepetir" onchange="alternarRepetirLanc()" style="width:16px;height:16px" />
+        Repetir todo mês
+      </label>
+      <div id="lRepetirQtdWrap" style="display:none;margin-top:8px">
+        <input id="lRepetirQtd" type="number" min="2" max="36" value="12" style="width:90px;display:inline-block" />
+        <span style="font-size:12px;color:var(--muted)">meses (incluindo este)</span>
+      </div>
     </div>
     <div class="modal-acoes">
       <button class="btn btn-fantasma" onclick="fecharModal('modalLancamento')">Cancelar</button>
@@ -1066,7 +1076,17 @@
       </div>
       <div class="campo"><label for="cConta">Conta</label><select id="cConta"></select></div>
     </div>
-    <div class="campo"><label for="cCategoria">Categoria</label><input id="cCategoria" placeholder="Ex: Fixo, Variável..." /></div>
+    <div class="campo"><label for="cCategoria">Categoria</label><select id="cCategoria"></select></div>
+    <div class="campo">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink)">
+        <input type="checkbox" id="cRepetir" onchange="alternarRepetirConta()" style="width:16px;height:16px" />
+        Repetir todo mês
+      </label>
+      <div id="cRepetirQtdWrap" style="display:none;margin-top:8px">
+        <input id="cRepetirQtd" type="number" min="2" max="36" value="12" style="width:90px;display:inline-block" />
+        <span style="font-size:12px;color:var(--muted)">meses (incluindo esta)</span>
+      </div>
+    </div>
     <div class="modal-acoes">
       <button class="btn btn-fantasma" onclick="fecharModal('modalConta')">Cancelar</button>
       <button class="btn btn-primario" onclick="salvarConta()">Salvar</button>
@@ -1953,7 +1973,7 @@ function renderLancamentosTable() {
     ? filtrados.map((l) => `
       <tr>
         <td class="mono">${formatDataBR(l.data)}</td>
-        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.descricao)}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.descricao)}${l.serie_id ? ' <span title="Lançamento recorrente" style="opacity:.6">🔁</span>' : ""}</td>
         <td style="color:var(--muted)">${esc(l.categoria || "—")}</td>
         <td style="color:var(--muted)">${l.tipo === "receita" ? (labelsCanal[l.canal] || l.canal || "—") : "—"}</td>
         <td style="color:var(--muted)">${l.cliente_id ? esc(nomeCliente(l.cliente_id)) : "—"}</td>
@@ -1963,7 +1983,7 @@ function renderLancamentosTable() {
         <td class="${l.tipo === "receita" ? "valor-receita" : "valor-despesa"}" style="text-align:right">${brl(l.valor)}</td>
         <td class="col-acoes">
           <button class="btn-mini" onclick="editarLancamento(${l.id})">Editar</button>
-          <button class="btn-mini perigo" onclick="excluirLancamento(${l.id})">Excluir</button>
+          <button class="btn-mini perigo" onclick="excluirLancamento(${l.id}, ${l.serie_id ? "true" : "false"})">Excluir</button>
         </td>
       </tr>
     `).join("")
@@ -1974,6 +1994,25 @@ function alternarCampoCanal() {
   $("campoCanal").style.display = $("lTipoSel").value === "receita" ? "block" : "none";
 }
 
+// popula um <select> de categoria com a lista fixa do CFG; se o valor atual (dado antigo)
+// não estiver na lista, injeta ele como opção extra pra não perder o dado ao editar
+function popularCategorias(selectEl, valorAtual) {
+  let html = '<option value="">— selecionar —</option>' + CFG.categorias.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  if (valorAtual && !CFG.categorias.includes(valorAtual)) {
+    html += `<option value="${esc(valorAtual)}">${esc(valorAtual)} (antiga)</option>`;
+  }
+  selectEl.innerHTML = html;
+  selectEl.value = valorAtual || "";
+}
+
+function alternarRepetirLanc() {
+  $("lRepetirQtdWrap").style.display = $("lRepetir").checked ? "block" : "none";
+}
+
+function alternarRepetirConta() {
+  $("cRepetirQtdWrap").style.display = $("cRepetir").checked ? "block" : "none";
+}
+
 function abrirNovoLancamento() {
   editandoLancId = null;
   $("modalLancTitulo").textContent = "Novo lançamento";
@@ -1982,11 +2021,15 @@ function abrirNovoLancamento() {
   $("lDesc").value = "";
   $("lTipoSel").value = "receita";
   $("lConta").value = contaFin !== "ALL" ? contaFin : "PJ";
-  $("lCategoria").value = "";
+  popularCategorias($("lCategoria"), "");
   $("lCanal").value = "direto";
   $("lCliente").value = "";
   $("lStatusSel").value = "pago";
+  $("lRepetir").checked = false;
+  $("lRepetirQtd").value = 12;
+  $("campoRepetirLanc").style.display = "block";
   alternarCampoCanal();
+  alternarRepetirLanc();
   $("modalLancamento").classList.add("aberto");
   setTimeout(() => $("lDesc").focus(), 50);
 }
@@ -2001,10 +2044,11 @@ function editarLancamento(id) {
   $("lDesc").value = l.descricao;
   $("lTipoSel").value = l.tipo;
   $("lConta").value = l.conta;
-  $("lCategoria").value = l.categoria || "";
+  popularCategorias($("lCategoria"), l.categoria || "");
   $("lCanal").value = l.canal || "direto";
   $("lCliente").value = l.cliente_id || "";
   $("lStatusSel").value = l.status;
+  $("campoRepetirLanc").style.display = "none"; // repetição só faz sentido ao criar
   alternarCampoCanal();
   $("modalLancamento").classList.add("aberto");
 }
@@ -2016,19 +2060,23 @@ async function salvarLancamento() {
     descricao: $("lDesc").value.trim() || "Sem descrição",
     tipo: $("lTipoSel").value,
     conta: $("lConta").value,
-    categoria: $("lCategoria").value.trim(),
+    categoria: $("lCategoria").value,
     canal: $("lTipoSel").value === "receita" ? $("lCanal").value : null,
     cliente_id: $("lCliente").value || null,
     status: $("lStatusSel").value,
   };
+  if (!editandoLancId && $("lRepetir").checked) {
+    body.repetir_meses = parseInt($("lRepetirQtd").value, 10) || 1;
+  }
 
   const res = editandoLancId
     ? await api("/api/lancamentos/" + editandoLancId, { method: "PATCH", body: JSON.stringify(body) })
     : await api("/api/lancamentos", { method: "POST", body: JSON.stringify(body) });
 
   if (res.ok) {
+    const data = await res.json();
     fecharModal("modalLancamento");
-    toast(editandoLancId ? "Lançamento atualizado" : "Lançamento criado");
+    toast(data.recorrente ? `${data.criados} lançamentos criados (repetição mensal)` : (editandoLancId ? "Lançamento atualizado" : "Lançamento criado"));
     carregarLancamentos();
     if (viewAtual === "finDashboard") carregarFinDashboard();
   } else {
@@ -2036,10 +2084,17 @@ async function salvarLancamento() {
   }
 }
 
-async function excluirLancamento(id) {
-  if (!confirm("Excluir este lançamento?")) return;
-  await api("/api/lancamentos/" + id, { method: "DELETE" });
-  toast("Lançamento excluído");
+async function excluirLancamento(id, recorrente) {
+  let apagarSerie = false;
+  if (recorrente) {
+    apagarSerie = confirm("Este lançamento faz parte de uma repetição mensal.\n\nOK = excluir este e os futuros da série\nCancelar = excluir só este");
+  } else {
+    if (!confirm("Excluir este lançamento?")) return;
+  }
+  const url = "/api/lancamentos/" + id + (apagarSerie ? "?serie=1" : "");
+  const res = await api(url, { method: "DELETE" });
+  const data = await res.json();
+  toast(apagarSerie ? `${data.excluidos} lançamentos excluídos` : "Lançamento excluído");
   carregarLancamentos();
 }
 
@@ -2066,14 +2121,14 @@ function renderContasList(lista, tipo, hoje) {
     return `
       <div class="conta-card ${status === "vencido" ? "vencido" : ""} ${status === "pago" ? "pago" : ""}">
         <div class="conta-info">
-          <div class="conta-desc">${esc(c.descricao)}</div>
+          <div class="conta-desc">${esc(c.descricao)}${c.serie_id ? ' <span title="Conta recorrente" style="opacity:.6">🔁</span>' : ""}</div>
           <div class="conta-meta">${c.categoria ? esc(c.categoria) + " · " : ""}${c.conta} · vence ${formatDataBR(c.vencimento)}</div>
         </div>
         <div class="conta-valor ${tipo}">${brl(c.valor)}</div>
         <div class="conta-acoes">
           <span class="pill pill-${status}">${status}</span>
           ${status !== "pago" ? `<button class="btn-mini" onclick="marcarContaPaga(${c.id})">Pago</button>` : ""}
-          <button class="btn-mini perigo" onclick="excluirConta(${c.id})">✕</button>
+          <button class="btn-mini perigo" onclick="excluirConta(${c.id}, ${c.serie_id ? "true" : "false"})">✕</button>
         </div>
       </div>
     `;
@@ -2086,7 +2141,10 @@ function abrirNovaConta() {
   $("cVenc").value = "";
   $("cTipo").value = "pagar";
   $("cConta").value = contaFin !== "ALL" ? contaFin : "PJ";
-  $("cCategoria").value = "";
+  popularCategorias($("cCategoria"), "");
+  $("cRepetir").checked = false;
+  $("cRepetirQtd").value = 12;
+  alternarRepetirConta();
   $("modalConta").classList.add("aberto");
   setTimeout(() => $("cDesc").focus(), 50);
 }
@@ -2098,12 +2156,16 @@ async function salvarConta() {
     vencimento: $("cVenc").value || new Date().toISOString().slice(0, 10),
     tipo: $("cTipo").value,
     conta: $("cConta").value,
-    categoria: $("cCategoria").value.trim(),
+    categoria: $("cCategoria").value,
   };
+  if ($("cRepetir").checked) {
+    body.repetir_meses = parseInt($("cRepetirQtd").value, 10) || 1;
+  }
   const res = await api("/api/contas", { method: "POST", body: JSON.stringify(body) });
   if (res.ok) {
+    const data = await res.json();
     fecharModal("modalConta");
-    toast("Conta cadastrada");
+    toast(data.recorrente ? `${data.criados} contas criadas (repetição mensal)` : "Conta cadastrada");
     carregarContas();
   } else {
     toast("Erro ao salvar. Confira os campos.");
@@ -2116,10 +2178,17 @@ async function marcarContaPaga(id) {
   carregarContas();
 }
 
-async function excluirConta(id) {
-  if (!confirm("Excluir esta conta?")) return;
-  await api("/api/contas/" + id, { method: "DELETE" });
-  toast("Conta excluída");
+async function excluirConta(id, recorrente) {
+  let apagarSerie = false;
+  if (recorrente) {
+    apagarSerie = confirm("Esta conta faz parte de uma repetição mensal.\n\nOK = excluir esta e as futuras da série\nCancelar = excluir só esta");
+  } else {
+    if (!confirm("Excluir esta conta?")) return;
+  }
+  const url = "/api/contas/" + id + (apagarSerie ? "?serie=1" : "");
+  const res = await api(url, { method: "DELETE" });
+  const data = await res.json();
+  toast(apagarSerie ? `${data.excluidos} contas excluídas` : "Conta excluída");
   carregarContas();
 }
 

@@ -18,6 +18,30 @@ Clientes
  └─ Clientes (lista, MRR, indicações, aniversários)
 ```
 
+## Categorias fixas e lançamentos/contas recorrentes
+
+- **Categorias fixas** — o campo "Categoria" em lançamentos e contas agora é uma lista fechada (editável em `functions/_shared.js`, chave `categorias`), evitando fragmentação tipo "Fixo"/"fixo"/"Fixos" no dashboard. Se um lançamento antigo tinha uma categoria fora da lista nova, ela continua aparecendo normalmente (só não editável via clique — abre como opção extra "(antiga)" pra você não perder o dado).
+- **Recorrência** — ao criar um lançamento ou conta, marque "Repetir todo mês" e diga por quantos meses. O sistema já cria todos de uma vez (ex: DAS-MEI dos próximos 12 meses num clique só). Excluir um item recorrente pergunta se quer apagar só aquele ou "este e os futuros da série" — o passado nunca é apagado.
+
+### Migração do banco (rodar uma vez, se você já tinha o banco de antes)
+
+Cole cada bloco separadamente no Console do D1:
+
+```sql
+ALTER TABLE lancamentos ADD COLUMN serie_id TEXT;
+```
+```sql
+ALTER TABLE contas_pagar_receber ADD COLUMN serie_id TEXT;
+```
+```sql
+CREATE INDEX IF NOT EXISTS idx_lanc_serie ON lancamentos(serie_id);
+```
+```sql
+CREATE INDEX IF NOT EXISTS idx_contas_serie ON contas_pagar_receber(serie_id);
+```
+
+*(Instalação nova do zero: o `schema.sql` já vem com tudo incluso.)*
+
 ## Módulo de Clientes
 
 Cadastro de clientes com:
