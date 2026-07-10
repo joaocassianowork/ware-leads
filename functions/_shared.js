@@ -44,6 +44,20 @@ export const CONFIG = {
     reuniao: 2,
     proposta: 3,
   },
+
+  // ---------- Financeiro ----------
+  contas: [
+    { id: "PJ", label: "PJ" },
+    { id: "PF", label: "PF" },
+  ],
+  canais: [
+    { id: "site", label: "Site" },
+    { id: "marketing", label: "Marketing" },
+    { id: "parceria", label: "Parceria" },
+    { id: "indicacao", label: "Indicação" },
+    { id: "direto", label: "Direto" },
+    { id: "outro", label: "Outro" },
+  ],
 };
 
 // ---------- helpers ----------
