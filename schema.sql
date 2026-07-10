@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS lancamentos (
   tipo TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pago',
   valor REAL NOT NULL,
+  cliente_id INTEGER REFERENCES clientes(id),
   criado_em TEXT NOT NULL DEFAULT (datetime('now')),
   atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -78,3 +79,39 @@ CREATE INDEX IF NOT EXISTS idx_lanc_tipo ON lancamentos(tipo);
 CREATE INDEX IF NOT EXISTS idx_contas_venc ON contas_pagar_receber(vencimento);
 CREATE INDEX IF NOT EXISTS idx_contas_status ON contas_pagar_receber(status);
 CREATE INDEX IF NOT EXISTS idx_contas_conta ON contas_pagar_receber(conta);
+
+-- ============================================================
+-- CLIENTES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS clientes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nome TEXT NOT NULL,
+  empresa TEXT,
+  telefone TEXT,
+  telefone_norm TEXT,
+  email TEXT,
+  aniversario TEXT,
+  mrr REAL DEFAULT 0,
+  conta TEXT NOT NULL DEFAULT 'PJ',
+  status TEXT NOT NULL DEFAULT 'ativo',
+  origem TEXT,
+  lead_id INTEGER REFERENCES leads(id),
+  indicado_por_id INTEGER REFERENCES clientes(id),
+  criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS notas_cliente (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  texto TEXT NOT NULL,
+  autor TEXT,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_clientes_status ON clientes(status);
+CREATE INDEX IF NOT EXISTS idx_clientes_indicado_por ON clientes(indicado_por_id);
+CREATE INDEX IF NOT EXISTS idx_clientes_aniversario ON clientes(aniversario);
+CREATE INDEX IF NOT EXISTS idx_notas_cliente ON notas_cliente(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_lanc_cliente ON lancamentos(cliente_id);

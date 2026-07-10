@@ -24,6 +24,10 @@ export async function onRequestPatch({ params, request, env }) {
     sets.push("valor = ?");
     binds.push(Number(b.valor));
   }
+  if ("cliente_id" in b) {
+    sets.push("cliente_id = ?");
+    binds.push(b.cliente_id || null);
+  }
   if (!sets.length) return json(atual);
 
   sets.push("atualizado_em = datetime('now')");

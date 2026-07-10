@@ -30,6 +30,10 @@ export async function onRequestGet({ request, env }) {
     where.push("canal = ?");
     binds.push(p.get("canal"));
   }
+  if (p.get("cliente")) {
+    where.push("cliente_id = ?");
+    binds.push(p.get("cliente"));
+  }
   if (p.get("q")) {
     where.push("descricao LIKE ?");
     binds.push(`%${p.get("q")}%`);
@@ -59,8 +63,8 @@ export async function onRequestPost({ request, env }) {
   const valor = Number(b.valor) || 0;
 
   const res = await env.DB.prepare(
-    `INSERT INTO lancamentos (data, descricao, categoria, canal, conta, tipo, status, valor)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO lancamentos (data, descricao, categoria, canal, conta, tipo, status, valor, cliente_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       data,
@@ -70,7 +74,8 @@ export async function onRequestPost({ request, env }) {
       b.conta || "PJ",
       b.tipo,
       b.status || "pago",
-      valor
+      valor,
+      b.cliente_id || null
     )
     .run();
 
