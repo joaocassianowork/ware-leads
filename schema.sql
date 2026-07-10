@@ -1,4 +1,4 @@
--- Pipeline de Leads — schema D1
+-- Pipeline de Leads - schema D1
 -- Executar: wrangler d1 execute leads-pipeline --remote --file=schema.sql
 
 CREATE TABLE IF NOT EXISTS leads (

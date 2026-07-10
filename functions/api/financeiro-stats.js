@@ -26,6 +26,20 @@ export async function onRequestGet({ request, env }) {
   const lucro = totalReceita - totalDespesa;
   const margem = totalReceita > 0 ? Math.round((lucro / totalReceita) * 100) : 0;
 
+  // saldo acumulado: soma de TODOS os lançamentos já pagos até o fim do mês selecionado
+  // (não zera ao trocar de mês nem em meses sem movimentação)
+  let sqlAcum = "SELECT tipo, COALESCE(SUM(valor),0) as total FROM lancamentos WHERE data <= ? AND status = 'pago'";
+  const bindsAcum = [fim];
+  if (conta !== "ALL") {
+    sqlAcum += " AND conta = ?";
+    bindsAcum.push(conta);
+  }
+  sqlAcum += " GROUP BY tipo";
+  const { results: acumResultados } = await env.DB.prepare(sqlAcum).bind(...bindsAcum).all();
+  const receitaAcumulada = Number(acumResultados.find((r) => r.tipo === "receita")?.total || 0);
+  const despesaAcumulada = Number(acumResultados.find((r) => r.tipo === "despesa")?.total || 0);
+  const saldoAcumulado = receitaAcumulada - despesaAcumulada;
+
   // meta
   const chave = `${conta}_${ano}_${mes}`;
   const metaRow = await env.DB.prepare("SELECT valor FROM metas WHERE chave = ?").bind(chave).first();
@@ -75,6 +89,9 @@ export async function onRequestGet({ request, env }) {
     margem,
     qtdReceitas: receitas.length,
     qtdDespesas: despesas.length,
+    saldoAcumulado,
+    receitaAcumulada,
+    despesaAcumulada,
     meta,
     canais,
     categorias,
