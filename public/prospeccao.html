@@ -114,6 +114,12 @@
 </div>
 
 <div class="wrap">
+  <div class="row" style="margin-top:0">
+    <button class="btn" id="tabBtnNovo">Nova prospecção</button>
+    <button class="btn secondary" id="tabBtnFollowup">Follow-up pendente <span id="followupBadge" class="mono" style="display:none"></span></button>
+  </div>
+
+  <div id="tabNovo">
   <h1>Fila de Prospecção</h1>
   <div class="sub">Mensagens únicas por contato, envio manual, lead criado automaticamente ao enviar.</div>
 
@@ -157,6 +163,21 @@ Escritório Souza Advocacia, 5518988888888, Birigui"></textarea>
   <ul class="queue" id="queue">
     <li class="empty">Suba um CSV ou cole a lista acima e clique em "Gerar mensagens".</li>
   </ul>
+  </div>
+
+  <div id="tabFollowup" style="display:none">
+    <h1>Follow-up pendente</h1>
+    <div class="sub">Leads da prospecção que esfriaram e ainda não tiveram um segundo toque.</div>
+    <div class="card">
+      <div class="row" style="margin-top:0">
+        <div class="fixed"><button class="btn" id="refreshFollowup">Buscar pendentes</button></div>
+        <div class="hint" id="followupStatus" style="margin:0"></div>
+      </div>
+    </div>
+    <ul class="queue" id="followupQueue">
+      <li class="empty">Clique em "Buscar pendentes" pra ver quem precisa de um segundo toque.</li>
+    </ul>
+  </div>
 </div>
 
 <script>
@@ -510,6 +531,161 @@ $("clear").addEventListener("click", () => {
 
 $("dailyCap").addEventListener("input", render);
 $("responsavel").addEventListener("change", async () => { await refreshSentToday(); render(); });
+
+// ================= tabs =================
+$("tabBtnNovo").addEventListener("click", () => {
+  $("tabNovo").style.display = "";
+  $("tabFollowup").style.display = "none";
+  $("tabBtnNovo").classList.remove("secondary");
+  $("tabBtnFollowup").classList.add("secondary");
+});
+$("tabBtnFollowup").addEventListener("click", () => {
+  $("tabNovo").style.display = "none";
+  $("tabFollowup").style.display = "";
+  $("tabBtnFollowup").classList.remove("secondary");
+  $("tabBtnNovo").classList.add("secondary");
+});
+
+// ================= follow-up =================
+let followupQueue = [];
+
+// Mensagem de follow-up: tom mais leve, retomando contato, nunca repete o gancho da primeira mensagem
+function gerarMensagemFollowup(lead, responsavel) {
+  const nomeCru = (lead.nome || "").trim();
+  const ehEsc = /advocacia|advogad|associad|sociedade|&/i.test(nomeCru);
+  const primeiro = ehEsc || !nomeCru ? "" : nomeCru.split(" ")[0];
+  const saudacao = primeiro ? `Oi ${primeiro}, tudo bem?` : `Oi, tudo bem?`;
+
+  const corpos = [
+    () => `Passando rápido só pra retomar — te mandei uma mensagem sobre a presença de vocês no Google e não sei se chegou a ver.`,
+    () => `Sei que a rotina de advogado é corrida, então só passando de novo — ainda faz sentido a gente conversar sobre o que te mandei?`,
+    () => `Não sei se ficou perdido no meio das mensagens, mas queria retomar aquele papo sobre a presença online do escritório.`,
+    () => `Só reforçando o contato — ficou alguma dúvida sobre o que te mandei antes, ou prefere que eu explique de outro jeito?`,
+  ];
+  const fechamentos = [
+    () => `Ainda faz sentido pra você?`,
+    () => `Vale a gente marcar uma conversa rápida?`,
+    () => `Topa eu te ligar rapidinho em vez de texto?`,
+    () => `Sem problema se não for prioridade agora — só me avisa.`,
+  ];
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]();
+  return [saudacao, pick(corpos), pick(fechamentos)].filter(Boolean).join(" ");
+}
+
+async function buscarFollowupPendentes() {
+  const statusEl = $("followupStatus");
+  const responsavel = $("responsavel").value;
+  statusEl.textContent = "Buscando...";
+  followupQueue = [];
+  renderFollowup();
+
+  let followUpDias = { novo: 1, contato: 2 };
+  try {
+    const cfgRes = await api("/api/config");
+    const cfg = await cfgRes.json();
+    if (cfg.followUpDias) followUpDias = cfg.followUpDias;
+  } catch (e) {}
+
+  let leads = [];
+  try {
+    const res = await api(`/api/leads?origem=prospeccao&responsavel=${encodeURIComponent(responsavel)}`);
+    leads = await res.json();
+  } catch (e) {
+    statusEl.textContent = "Erro ao buscar leads.";
+    return;
+  }
+
+  const agora = Date.now();
+  const candidatos = (leads || []).filter((l) => {
+    if (!["novo", "contato"].includes(l.status)) return false;
+    const dias = followUpDias[l.status];
+    if (!dias) return false;
+    const desde = new Date(l.status_alterado_em.replace(" ", "T") + "Z").getTime();
+    const diasParados = (agora - desde) / (1000 * 60 * 60 * 24);
+    return diasParados >= dias;
+  });
+
+  // pra cada candidato, checa se já não teve follow-up recente (nota marcada) antes de incluir de novo
+  const pendentes = [];
+  for (const lead of candidatos) {
+    try {
+      const res = await api(`/api/leads/${lead.id}`);
+      const detalhe = await res.json();
+      const ultimaFollowup = (detalhe.notas || []).find((n) => (n.texto || "").startsWith("[Follow-up]"));
+      if (ultimaFollowup) {
+        const desdeFollowup = (agora - new Date(ultimaFollowup.criado_em.replace(" ", "T") + "Z").getTime()) / (1000 * 60 * 60 * 24);
+        const dias = followUpDias[lead.status] || 2;
+        if (desdeFollowup < dias) continue; // já teve follow-up recente, não repete ainda
+      }
+      pendentes.push(lead);
+    } catch (e) {}
+  }
+
+  followupQueue = pendentes.map((lead) => ({
+    id: "f" + lead.id,
+    leadId: lead.id,
+    name: lead.nome,
+    phone: lead.telefone_norm || (lead.telefone || "").replace(/\D/g, ""),
+    status: lead.status,
+    message: gerarMensagemFollowup(lead, responsavel),
+    done: false,
+  }));
+
+  $("followupBadge").style.display = followupQueue.length ? "inline" : "none";
+  $("followupBadge").textContent = "(" + followupQueue.length + ")";
+  statusEl.textContent = followupQueue.length
+    ? `${followupQueue.length} lead(s) pronto(s) pra follow-up.`
+    : "Nenhum follow-up pendente agora — tudo em dia.";
+  renderFollowup();
+}
+
+function renderFollowup() {
+  const list = $("followupQueue");
+  if (followupQueue.length === 0) {
+    list.innerHTML = '<li class="empty">Clique em "Buscar pendentes" pra ver quem precisa de um segundo toque.</li>';
+    return;
+  }
+  list.innerHTML = followupQueue
+    .map((c, i) => {
+      const link = `https://wa.me/${c.phone}?text=${encodeURIComponent(c.message)}`;
+      return `
+      <li class="item ${c.done ? "done" : ""}" data-id="${c.id}">
+        <span class="idx">${String(i + 1).padStart(2, "0")}</span>
+        <div>
+          <div class="name">${c.name || c.phone}</div>
+          <div class="phone">${c.phone} — etapa: ${c.status}</div>
+          <div class="msg-preview">${c.message}</div>
+        </div>
+        <div class="item-actions">
+          <a class="wa-btn ${c.done ? "disabled" : ""}" href="${link}" target="_blank" rel="noopener">Abrir no WhatsApp</a>
+          <button class="mark" data-id="${c.id}">${c.done ? "Enviado" : "Marcar enviado"}</button>
+        </div>
+      </li>`;
+    })
+    .join("");
+
+  list.querySelectorAll("button.mark").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const c = followupQueue.find((q) => q.id === id);
+      if (c.done) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/leads/${c.leadId}/notas`, {
+          method: "POST",
+          body: JSON.stringify({ texto: "[Follow-up] " + c.message, autor: $("responsavel").value }),
+        });
+        if (c.status === "novo") {
+          await api(`/api/leads/${c.leadId}`, { method: "PATCH", body: JSON.stringify({ status: "contato" }) });
+        }
+      } catch (e) {}
+      c.done = true;
+      renderFollowup();
+    });
+  });
+}
+
+$("refreshFollowup").addEventListener("click", buscarFollowupPendentes);
 
 // ================= boot: checa sessão existente =================
 (async function boot() {
