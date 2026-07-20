@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #F1F2EF;
@@ -117,9 +118,12 @@
   <div class="sub">Mensagens únicas por contato, envio manual, lead criado automaticamente ao enviar.</div>
 
   <div class="card">
-    <label for="csv">Subir CSV</label>
-    <input type="file" id="csv" accept=".csv" />
-    <div class="hint">Colunas aceitas (com cabeçalho): <b>nome, telefone, cidade</b> (cidade é opcional). Telefone com DDI 55. Feito pra prospecção de quem <b>ainda não tem site</b> — a mensagem nunca menciona ou analisa um site existente.</div>
+    <label for="csv">Subir arquivo (.xlsx da extensão de Maps, ou .csv)</label>
+    <input type="file" id="csv" accept=".csv,.xlsx,.xls" />
+    <div class="hint">Aceita direto a planilha exportada da extensão do Google Maps (colunas: Nome do Estabelecimento, Telefone, Nota Média, Número de Avaliações, Site) — classifica automaticamente quem não tem site próprio (incluindo perfis que só têm Instagram/WhatsApp/OAB no lugar do site) e descarta números fixos. Também aceita CSV simples com <b>nome, telefone, cidade</b>.</div>
+
+    <label style="margin-top:16px">Cidade (aplicada a todos os contatos da planilha, opcional)</label>
+    <input type="text" id="cidadeGlobal" placeholder="Ex: Birigui" style="max-width:240px" />
 
     <label style="margin-top:16px">Ou cole aqui (nome, telefone, cidade)</label>
     <textarea id="input" placeholder="Dr. João Silva, 5518999999999, Araçatuba
@@ -194,29 +198,82 @@ async function iniciar() {
 
 // ================= helpers =================
 function normalizePhone(raw) {
-  let digits = raw.replace(/\D/g, "");
+  let digits = (raw || "").replace(/\D/g, "");
   if (digits.length <= 11 && !digits.startsWith("55")) digits = "55" + digits;
   return digits;
 }
 
-function parseRows(text) {
+// Celular BR: DDI(2) + DDD(2) + 9 dígitos = 13 dígitos. Fixo tem só 8 depois do DDD (12 no total) — não recebe WhatsApp.
+function ehCelular(phoneNormalizado) {
+  return phoneNormalizado.length === 13;
+}
+
+// Classifica a coluna "Site" da planilha do Maps: só conta como "site de verdade" se for
+// um domínio próprio. Instagram, WhatsApp, ou sites institucionais (OAB/CAASP) contam como "sem site".
+function classificarSite(valor) {
+  const v = (valor || "").trim();
+  if (!v || /^sem site$/i.test(v)) return false;
+  const semSitePadroes = /instagram\.com|facebook\.com|api\.whatsapp\.com|wa\.me|oab\.org\.br|caasp\.org\.br|linktr\.ee/i;
+  if (semSitePadroes.test(v)) return false;
+  return true; // domínio próprio = site real, considerado fora do público-alvo
+}
+
+function parseRowsTexto(text) {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  if (lines.length === 0) return [];
+  if (lines.length === 0) return { validos: [], comSite: 0, fixos: 0 };
   const headerLike = /nome/i.test(lines[0]) && /telefone|phone/i.test(lines[0]);
   const start = headerLike ? 1 : 0;
   const rows = [];
   for (let i = start; i < lines.length; i++) {
     const parts = lines[i].split(",").map((s) => s.trim());
     if (parts.length === 0) continue;
-    const phoneIdx = parts.findIndex((p) => p.replace(/\D/g, "").length >= 10);
+    const phoneIdx = parts.findIndex((p) => p.replace(/\D/g, "").length >= 8);
     if (phoneIdx === -1) continue;
     const name = phoneIdx === 0 ? "" : parts[0];
     const phone = normalizePhone(parts[phoneIdx]);
     const rest = parts.filter((_, idx) => idx !== 0 && idx !== phoneIdx);
     const city = rest[0] || "";
-    if (phone.length >= 12) rows.push({ name, phone, city });
+    if (phone) rows.push({ name, phone, city });
   }
-  return rows;
+  return { validos: rows, comSite: 0, fixos: 0 };
+}
+
+// Lê a planilha exportada da extensão do Maps (Nome do Estabelecimento, Telefone, Nota Média, Número de Avaliações, Site)
+function parseRowsPlanilha(aoa, cidadeGlobal) {
+  if (aoa.length === 0) return { validos: [], comSite: 0, fixos: 0 };
+  const header = aoa[0].map((h) => String(h || "").toLowerCase());
+  const idxNome = header.findIndex((h) => h.includes("nome") || h.includes("estabelecimento"));
+  const idxTelefone = header.findIndex((h) => h.includes("telefone") || h.includes("phone"));
+  const idxSite = header.findIndex((h) => h.includes("site"));
+
+  const validos = [];
+  let comSite = 0;
+  let fixos = 0;
+
+  for (let i = 1; i < aoa.length; i++) {
+    const row = aoa[i];
+    if (!row || row.length === 0) continue;
+    const name = idxNome >= 0 ? String(row[idxNome] || "").trim() : "";
+    const phoneRaw = idxTelefone >= 0 ? String(row[idxTelefone] || "") : "";
+    const siteRaw = idxSite >= 0 ? String(row[idxSite] || "") : "";
+    if (!phoneRaw) continue;
+
+    const temSiteReal = classificarSite(siteRaw);
+    if (temSiteReal) {
+      comSite++;
+      continue; // fora do público-alvo — só prospectamos quem não tem site
+    }
+
+    const phone = normalizePhone(phoneRaw);
+    if (!ehCelular(phone)) {
+      fixos++;
+      continue; // fixo não recebe WhatsApp
+    }
+
+    validos.push({ name, phone, city: cidadeGlobal || "" });
+  }
+
+  return { validos, comSite, fixos };
 }
 
 // Gerador local de mensagens — sem custo, sem depender de API paga.
@@ -404,17 +461,29 @@ async function marcarEnviado(c) {
 $("build").addEventListener("click", async () => {
   const fileInput = $("csv");
   const statusEl = $("genStatus");
-  let text = $("input").value;
-  if (fileInput.files.length > 0) text = await fileInput.files[0].text();
+  const cidadeGlobal = $("cidadeGlobal").value.trim();
 
-  const rows = parseRows(text);
-  if (rows.length === 0) {
-    statusEl.textContent = "Não encontrei contatos válidos. Confira o formato (precisa de telefone com DDI).";
+  let resultado;
+  const file = fileInput.files[0];
+
+  if (file && /\.(xlsx|xls)$/i.test(file.name)) {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+    resultado = parseRowsPlanilha(aoa, cidadeGlobal);
+  } else {
+    const text = file ? await file.text() : $("input").value;
+    resultado = parseRowsTexto(text);
+  }
+
+  if (resultado.validos.length === 0) {
+    statusEl.textContent = "Não encontrei contatos válidos pra prospectar (sem site e com celular). Confira o arquivo.";
     return;
   }
 
   await refreshSentToday();
-  queue = rows.map((r, i) => ({ id: "c" + i + "_" + Date.now(), ...r, message: "", done: false, justSent: false, duplicado: false }));
+  queue = resultado.validos.map((r, i) => ({ id: "c" + i + "_" + Date.now(), ...r, message: "", done: false, justSent: false, duplicado: false }));
   render();
 
   const buildBtn = $("build");
@@ -426,7 +495,10 @@ $("build").addEventListener("click", async () => {
     generated++;
     render();
   }
-  statusEl.textContent = `Pronto — ${generated} mensagens únicas geradas.`;
+  const filtros = [];
+  if (resultado.comSite > 0) filtros.push(`${resultado.comSite} já têm site (ignorados)`);
+  if (resultado.fixos > 0) filtros.push(`${resultado.fixos} são telefone fixo (ignorados)`);
+  statusEl.textContent = `Pronto — ${generated} mensagens geradas.` + (filtros.length ? ` ${filtros.join(", ")}.` : "");
   buildBtn.disabled = false;
 });
 
