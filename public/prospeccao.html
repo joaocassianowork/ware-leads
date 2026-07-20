@@ -220,21 +220,60 @@ function parseRows(text) {
   return rows;
 }
 
-async function gerarMensagem(contact) {
-  try {
-    const res = await api("/api/gerar-mensagem", {
-      method: "POST",
-      body: JSON.stringify({ nome: contact.name, cidade: contact.city, area: contact.area }),
-    });
-    const data = await res.json();
-    if (data.mensagem) return data.mensagem;
-  } catch (e) {}
-  const openers = [
-    `Oi${contact.name ? ", tudo bem" : ""}? Vi o site d${contact.name ? "o " + contact.name : "a sua empresa"} e reparei que dá pra melhorar bastante como ele aparece pra quem pesquisa no Google.`,
-    `Oi! Reparei uma coisa no site d${contact.name ? "o " + contact.name : "e vocês"} que provavelmente está custando contatos de clientes em potencial.`,
-    `Oi, tudo bem? Trabalho com presença digital só pra advogados e vi uma oportunidade rápida no site d${contact.name ? "o " + contact.name : "e vocês"}.`,
+// Gerador local de mensagens — sem custo, sem depender de API paga.
+// Monta a mensagem combinando peças variadas (tratamento + gancho + fechamento)
+// para reduzir ao máximo a chance de duas mensagens saírem iguais.
+function ehEscritorio(nome) {
+  return /advocacia|advogad|associad|sociedade|&/i.test(nome || "");
+}
+
+function tratamento(contact) {
+  const nome = (contact.name || "").trim();
+  if (!nome) return { sujeito: "vocês", ref: "o escritório" };
+  if (ehEscritorio(nome)) return { sujeito: nome, ref: nome };
+  // pessoa física: usa só o primeiro nome pra soar natural
+  const primeiro = nome.split(" ")[0];
+  return { sujeito: primeiro, ref: primeiro };
+}
+
+function gerarMensagemLocal(contact) {
+  const t = tratamento(contact);
+  const pessoa = !ehEscritorio(contact.name || "") && (contact.name || "").trim() !== "";
+
+  const aberturas = [
+    () => `Oi${pessoa ? ", " + t.sujeito : ""}, tudo bem?`,
+    () => `Oi! Passando rápido aqui.`,
+    () => `Opa, tudo certo?`,
+    () => pessoa ? `Oi ${t.sujeito}, será que posso te tomar 1 minuto?` : `Oi, tudo bem por aí?`,
+    () => `Oi! Não sei se é o momento certo, mas...`,
   ];
-  return openers[Math.floor(Math.random() * openers.length)] + " Posso te mandar o que encontrei?";
+
+  const ganchos = [
+    () => `reparei que ${pessoa ? "o site d" + (pessoa ? "e " + t.sujeito : "") : "o site d" + (contact.city ? "e vocês" : "e vocês")} demora bastante pra carregar — isso costuma afastar quem está pesquisando no Google.`,
+    () => `vi que ${pessoa ? t.sujeito : t.ref} não aparece nas primeiras posições do Google pra quem busca advogado${contact.city ? " em " + contact.city : ""}.`,
+    () => `notei que ${pessoa ? t.sujeito + " ainda não tem" : t.ref + " ainda não tem"} um site próprio, só perfil em rede social — o que dificulta passar credibilidade pra quem pesquisa antes de fechar.`,
+    () => `dei uma olhada no site ${pessoa ? "d" + (contact.city ? "e vocês" : "e vocês") : "de vocês"} e o design está bem datado comparado ao que os concorrentes${contact.city ? " em " + contact.city : ""} estão usando.`,
+    () => `percebi que não tem um jeito fácil de falar com ${pessoa ? t.sujeito : "vocês"} direto pelo site — sem WhatsApp ou formulário visível, muita gente desiste no meio do caminho.`,
+    () => `vi o site e a primeira impressão não passa a mesma seriedade que ${pessoa ? t.sujeito + " tem" : "vocês têm"} no dia a dia com os clientes.`,
+  ];
+
+  const fechamentos = [
+    () => `Posso te mandar o que encontrei?`,
+    () => `Faz sentido eu te mostrar rapidinho o que vi?`,
+    () => `Quer que eu te mande um print do que notei?`,
+    () => `Vale eu te explicar melhor por aqui mesmo?`,
+    () => `Topa eu te mandar os detalhes?`,
+  ];
+
+  const abertura = aberturas[Math.floor(Math.random() * aberturas.length)]();
+  const gancho = ganchos[Math.floor(Math.random() * ganchos.length)]();
+  const fechamento = fechamentos[Math.floor(Math.random() * fechamentos.length)]();
+
+  return `${abertura} ${gancho.charAt(0).toUpperCase() + gancho.slice(1)} ${fechamento}`;
+}
+
+async function gerarMensagem(contact) {
+  return gerarMensagemLocal(contact);
 }
 
 // conta quantos leads de prospecção este responsável já criou hoje (limite real, compartilhado via D1)
