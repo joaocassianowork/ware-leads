@@ -119,11 +119,11 @@
   <div class="card">
     <label for="csv">Subir CSV</label>
     <input type="file" id="csv" accept=".csv" />
-    <div class="hint">Colunas aceitas (com cabeçalho): <b>nome, telefone, cidade, area</b> (cidade e área são opcionais). Telefone com DDI 55.</div>
+    <div class="hint">Colunas aceitas (com cabeçalho): <b>nome, telefone, cidade</b> (cidade é opcional). Telefone com DDI 55. Feito pra prospecção de quem <b>ainda não tem site</b> — a mensagem nunca menciona ou analisa um site existente.</div>
 
-    <label style="margin-top:16px">Ou cole aqui (nome, telefone, cidade, área)</label>
-    <textarea id="input" placeholder="Dr. João Silva, 5518999999999, Araçatuba, Previdenciário
-Escritório Souza Advocacia, 5518988888888, Birigui, Trabalhista"></textarea>
+    <label style="margin-top:16px">Ou cole aqui (nome, telefone, cidade)</label>
+    <textarea id="input" placeholder="Dr. João Silva, 5518999999999, Araçatuba
+Escritório Souza Advocacia, 5518988888888, Birigui"></textarea>
 
     <div class="row">
       <div class="fixed">
@@ -214,55 +214,57 @@ function parseRows(text) {
     const phone = normalizePhone(parts[phoneIdx]);
     const rest = parts.filter((_, idx) => idx !== 0 && idx !== phoneIdx);
     const city = rest[0] || "";
-    const area = rest[1] || "";
-    if (phone.length >= 12) rows.push({ name, phone, city, area });
+    if (phone.length >= 12) rows.push({ name, phone, city });
   }
   return rows;
 }
 
 // Gerador local de mensagens — sem custo, sem depender de API paga.
-// Monta a mensagem combinando peças variadas (tratamento + gancho + fechamento)
-// para reduzir ao máximo a chance de duas mensagens saírem iguais.
+// Foco: contatos que NÃO têm site. Nunca menciona "vi o site" ou analisa nada existente —
+// a mensagem vende a ausência do site como oportunidade perdida.
 function ehEscritorio(nome) {
   return /advocacia|advogad|associad|sociedade|&/i.test(nome || "");
 }
 
 function tratamento(contact) {
   const nome = (contact.name || "").trim();
-  if (!nome) return { sujeito: "vocês", ref: "o escritório" };
-  if (ehEscritorio(nome)) return { sujeito: nome, ref: nome };
-  // pessoa física: usa só o primeiro nome pra soar natural
+  if (!nome) return { sujeito: "vocês", deSujeito: "de vocês", pessoa: false };
+  if (ehEscritorio(nome)) return { sujeito: nome, deSujeito: "de " + nome, pessoa: false };
+  // pessoa física: usa só o primeiro nome, e "de <nome>" evita ter que escolher "do/da" (gênero)
   const primeiro = nome.split(" ")[0];
-  return { sujeito: primeiro, ref: primeiro };
+  return { sujeito: primeiro, deSujeito: "de " + primeiro, pessoa: true };
 }
 
 function gerarMensagemLocal(contact) {
   const t = tratamento(contact);
-  const pessoa = !ehEscritorio(contact.name || "") && (contact.name || "").trim() !== "";
+  const local = contact.city ? " em " + contact.city : "";
+  const verboTer = t.pessoa ? "tem" : "têm";
 
   const aberturas = [
-    () => `Oi${pessoa ? ", " + t.sujeito : ""}, tudo bem?`,
+    () => `Oi${t.pessoa ? ", " + t.sujeito : ""}, tudo bem?`,
     () => `Oi! Passando rápido aqui.`,
     () => `Opa, tudo certo?`,
-    () => pessoa ? `Oi ${t.sujeito}, será que posso te tomar 1 minuto?` : `Oi, tudo bem por aí?`,
+    () => t.pessoa ? `Oi ${t.sujeito}, posso te tomar 1 minuto?` : `Oi, tudo bem por aí?`,
     () => `Oi! Não sei se é o momento certo, mas...`,
+    () => `Oi${t.pessoa ? ", " + t.sujeito : ""}! Direto ao ponto:`,
   ];
 
+  // Ganchos focados 100% em quem NÃO tem site — nunca presume ou analisa um site existente
   const ganchos = [
-    () => `reparei que ${pessoa ? "o site d" + (pessoa ? "e " + t.sujeito : "") : "o site d" + (contact.city ? "e vocês" : "e vocês")} demora bastante pra carregar — isso costuma afastar quem está pesquisando no Google.`,
-    () => `vi que ${pessoa ? t.sujeito : t.ref} não aparece nas primeiras posições do Google pra quem busca advogado${contact.city ? " em " + contact.city : ""}.`,
-    () => `notei que ${pessoa ? t.sujeito + " ainda não tem" : t.ref + " ainda não tem"} um site próprio, só perfil em rede social — o que dificulta passar credibilidade pra quem pesquisa antes de fechar.`,
-    () => `dei uma olhada no site ${pessoa ? "d" + (contact.city ? "e vocês" : "e vocês") : "de vocês"} e o design está bem datado comparado ao que os concorrentes${contact.city ? " em " + contact.city : ""} estão usando.`,
-    () => `percebi que não tem um jeito fácil de falar com ${pessoa ? t.sujeito : "vocês"} direto pelo site — sem WhatsApp ou formulário visível, muita gente desiste no meio do caminho.`,
-    () => `vi o site e a primeira impressão não passa a mesma seriedade que ${pessoa ? t.sujeito + " tem" : "vocês têm"} no dia a dia com os clientes.`,
+    () => `reparei que ${t.pessoa ? t.sujeito : "o escritório"} ainda não ${verboTer} um site próprio — hoje quem pesquisa advogado${local} no Google nem chega a saber que vocês existem, só quem já foi indicado.`,
+    () => `notei que ${t.pessoa ? t.sujeito : "vocês"} ${t.pessoa ? "trabalha" : "trabalham"} só com indicação, sem um site — isso é ótimo até um certo ponto, mas trava o crescimento porque depende sempre de alguém lembrar de vocês.`,
+    () => `vi que a concorrência${local} já está aparecendo no Google e ${t.pessoa ? t.sujeito : "o escritório"} ainda não tem essa porta de entrada — é cliente novo passando batido todo mês.`,
+    () => `pensei em ${t.pessoa ? t.sujeito : "vocês"} porque trabalho só com advogados e ajudo justamente quem ainda não tem presença online a começar a aparecer pra quem pesquisa um advogado${local} sem conhecer ninguém.`,
+    () => `${t.pessoa ? t.sujeito + " deve" : "vocês devem"} receber bastante cliente por indicação, mas sem site isso tem teto — quem não conhece ninguém do ramo simplesmente não encontra ${t.pessoa ? t.sujeito : "o escritório"}.`,
+    () => `imagino que hoje o principal jeito de chegar até ${t.pessoa ? t.sujeito : "vocês"} seja boca a boca — um site simples resolve isso e ainda passa mais confiança antes da primeira conversa.`,
   ];
 
   const fechamentos = [
-    () => `Posso te mandar o que encontrei?`,
-    () => `Faz sentido eu te mostrar rapidinho o que vi?`,
-    () => `Quer que eu te mande um print do que notei?`,
-    () => `Vale eu te explicar melhor por aqui mesmo?`,
-    () => `Topa eu te mandar os detalhes?`,
+    () => `Posso te explicar rapidinho como funciona?`,
+    () => `Faz sentido eu te mostrar como isso funcionaria pra vocês?`,
+    () => `Topa eu te mandar um exemplo de como ficaria?`,
+    () => `Vale a pena eu te explicar melhor por aqui mesmo?`,
+    () => `Quer que eu te mostre como outros escritórios resolveram isso?`,
   ];
 
   const abertura = aberturas[Math.floor(Math.random() * aberturas.length)]();
