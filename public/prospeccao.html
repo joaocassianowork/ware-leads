@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Prospecção — Sistema Interno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F1F2EF;
+    --surface: #FFFFFF;
+    --ink: #1A1D22;
+    --ink-2: #3A3F45;
+    --muted: #6C7176;
+    --border: #E3E5E0;
+    --border-2: #D5D8D2;
+    --amarelo: #E8A020;
+    --vermelho: #C4534A;
+    --verde: #2E9E5B;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(20,22,26,.06), 0 4px 16px rgba(20,22,26,.05);
+    --font-ui: "Archivo", sans-serif;
+    --font-body: "IBM Plex Sans", sans-serif;
+    --font-mono: "IBM Plex Mono", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font-body); background: var(--bg); color: var(--ink); font-size: 14px; }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; font-size: 14px; }
+  .mono { font-family: var(--font-mono); }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .topbar a { color: var(--muted); text-decoration: none; font-family: var(--font-ui); font-size: 13px; }
+  .topbar a:hover { color: var(--ink); }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 28px; }
+  h1 { font-family: var(--font-ui); font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 20px; }
+  label { display: block; font-family: var(--font-ui); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+  textarea, input[type=file], input[type=number], select {
+    width: 100%; border: 1px solid var(--border-2); border-radius: 6px; background: var(--bg);
+    padding: 10px; color: var(--ink);
+  }
+  textarea { min-height: 110px; font-family: var(--font-mono); font-size: 13px; resize: vertical; }
+  textarea:focus, input:focus, select:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; align-items: flex-end; }
+  .row > div { flex: 1; min-width: 140px; }
+  .row .fixed { flex: 0 0 auto; min-width: 0; }
+
+  .btn { font-family: var(--font-ui); font-size: 13px; font-weight: 600; padding: 10px 16px; border-radius: 6px; border: 1px solid var(--ink); background: var(--ink); color: #fff; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.secondary { background: transparent; color: var(--ink); }
+  .btn:hover:not(:disabled) { opacity: .88; }
+
+  .stats { display: flex; gap: 20px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-bottom: 16px; flex-wrap: wrap; }
+  .stats b { color: var(--ink); }
+  .stats .cap { color: var(--amarelo); }
+
+  ul.queue { list-style: none; }
+  li.item { display: flex; align-items: flex-start; gap: 14px; padding: 14px 4px; border-bottom: 1px solid var(--border); }
+  li.item.done { opacity: .45; }
+  li.item.locked { opacity: .4; }
+  .idx { font-family: var(--font-mono); font-size: 11px; color: var(--muted); width: 22px; flex-shrink: 0; padding-top: 2px; }
+  .name { font-weight: 600; }
+  .phone { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .msg-preview { font-size: 13px; color: var(--ink-2); margin-top: 4px; max-width: 440px; line-height: 1.5; }
+  .msg-preview.loading { color: var(--muted); font-style: italic; }
+  .item-actions { margin-left: auto; display: flex; gap: 8px; flex-shrink: 0; flex-direction: column; align-items: flex-end; }
+  a.wa-btn {
+    font-family: var(--font-ui); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em;
+    text-decoration: none; background: #E8F5E9; color: var(--verde); padding: 7px 12px; border-radius: 6px; white-space: nowrap;
+  }
+  a.wa-btn.disabled { pointer-events: none; opacity: .4; }
+  button.mark { background: transparent; border: 1px solid var(--border-2); color: var(--ink-2); font-size: 11px; padding: 7px 10px; border-radius: 6px; white-space: nowrap; }
+  .badge-locked { font-family: var(--font-mono); font-size: 10px; color: var(--amarelo); text-transform: uppercase; margin-top: 3px; }
+  .badge-dup { font-family: var(--font-mono); font-size: 10px; color: var(--vermelho); text-transform: uppercase; margin-top: 3px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 20px 4px; }
+
+  /* login (mesmo padrão do sistema) */
+  .overlay { position: fixed; inset: 0; background: rgba(20,22,26,.55); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .overlay.aberto { display: flex; }
+  .login-box { background: var(--surface); border-radius: var(--radius); padding: 28px; width: 300px; box-shadow: var(--shadow); }
+  .login-box h1 { font-size: 18px; margin-bottom: 6px; }
+  .login-box p { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .login-box input { margin-bottom: 12px; }
+  .login-erro { color: var(--vermelho); font-size: 13px; margin-top: 10px; display: none; }
+</style>
+</head>
+<body>
+
+<div class="overlay aberto" id="loginOverlay">
+  <div class="login-box">
+    <h1>Sistema<span style="color:var(--amarelo)">.</span></h1>
+    <p>Uso interno. Digite a senha da equipe.</p>
+    <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password" />
+    <button class="btn" style="width:100%" onclick="fazerLogin()">Entrar</button>
+    <div class="login-erro" id="loginErro">Senha incorreta. Tente de novo.</div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div style="font-family:var(--font-ui);font-weight:700">Prospecção</div>
+  <a href="/">&larr; voltar ao sistema</a>
+</div>
+
+<div class="wrap">
+  <h1>Fila de Prospecção</h1>
+  <div class="sub">Mensagens únicas por contato, envio manual, lead criado automaticamente ao enviar.</div>
+
+  <div class="card">
+    <label for="csv">Subir CSV</label>
+    <input type="file" id="csv" accept=".csv" />
+    <div class="hint">Colunas aceitas (com cabeçalho): <b>nome, telefone, cidade, area</b> (cidade e área são opcionais). Telefone com DDI 55.</div>
+
+    <label style="margin-top:16px">Ou cole aqui (nome, telefone, cidade, área)</label>
+    <textarea id="input" placeholder="Dr. João Silva, 5518999999999, Araçatuba, Previdenciário
+Escritório Souza Advocacia, 5518988888888, Birigui, Trabalhista"></textarea>
+
+    <div class="row">
+      <div class="fixed">
+        <label>Responsável</label>
+        <select id="responsavel">
+          <option value="João">João</option>
+          <option value="Rebeca">Rebeca</option>
+        </select>
+      </div>
+      <div class="fixed">
+        <label>Limite diário</label>
+        <input type="number" id="dailyCap" value="45" min="1" max="200" style="width:80px" />
+      </div>
+      <div class="fixed"><button class="btn" id="build">Gerar mensagens</button></div>
+      <div class="fixed"><button class="btn secondary" id="clear">Limpar tudo</button></div>
+    </div>
+    <div class="hint" id="genStatus"></div>
+  </div>
+
+  <div class="stats" id="stats" style="display:none">
+    <span>Total na lista: <b id="statTotal">0</b></span>
+    <span>Enviados hoje (<span id="statResp"></span>): <b id="statSentToday">0</b></span>
+    <span class="cap">Limite hoje: <b id="statCap">0</b></span>
+    <span>Liberados agora: <b id="statUnlocked">0</b></span>
+  </div>
+
+  <ul class="queue" id="queue">
+    <li class="empty">Suba um CSV ou cole a lista acima e clique em "Gerar mensagens".</li>
+  </ul>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let queue = [];
+let sentTodayCount = 0;
+
+// ================= auth (mesmo padrão do index.html) =================
+async function api(caminho, opts = {}) {
+  const res = await fetch(caminho, { headers: { "Content-Type": "application/json" }, ...opts });
+  if (res.status === 401) {
+    $("loginOverlay").classList.add("aberto");
+    throw new Error("401");
+  }
+  return res;
+}
+
+async function fazerLogin() {
+  const senha = $("loginSenha").value;
+  const res = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ senha }),
+  });
+  if (res.ok) {
+    $("loginOverlay").classList.remove("aberto");
+    $("loginErro").style.display = "none";
+    iniciar();
+  } else {
+    $("loginErro").style.display = "block";
+  }
+}
+$("loginSenha").addEventListener("keydown", (e) => { if (e.key === "Enter") fazerLogin(); });
+
+async function iniciar() {
+  await refreshSentToday();
+  render();
+}
+
+// ================= helpers =================
+function normalizePhone(raw) {
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length <= 11 && !digits.startsWith("55")) digits = "55" + digits;
+  return digits;
+}
+
+function parseRows(text) {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return [];
+  const headerLike = /nome/i.test(lines[0]) && /telefone|phone/i.test(lines[0]);
+  const start = headerLike ? 1 : 0;
+  const rows = [];
+  for (let i = start; i < lines.length; i++) {
+    const parts = lines[i].split(",").map((s) => s.trim());
+    if (parts.length === 0) continue;
+    const phoneIdx = parts.findIndex((p) => p.replace(/\D/g, "").length >= 10);
+    if (phoneIdx === -1) continue;
+    const name = phoneIdx === 0 ? "" : parts[0];
+    const phone = normalizePhone(parts[phoneIdx]);
+    const rest = parts.filter((_, idx) => idx !== 0 && idx !== phoneIdx);
+    const city = rest[0] || "";
+    const area = rest[1] || "";
+    if (phone.length >= 12) rows.push({ name, phone, city, area });
+  }
+  return rows;
+}
+
+async function gerarMensagem(contact) {
+  try {
+    const res = await api("/api/gerar-mensagem", {
+      method: "POST",
+      body: JSON.stringify({ nome: contact.name, cidade: contact.city, area: contact.area }),
+    });
+    const data = await res.json();
+    if (data.mensagem) return data.mensagem;
+  } catch (e) {}
+  const openers = [
+    `Oi${contact.name ? ", tudo bem" : ""}? Vi o site d${contact.name ? "o " + contact.name : "a sua empresa"} e reparei que dá pra melhorar bastante como ele aparece pra quem pesquisa no Google.`,
+    `Oi! Reparei uma coisa no site d${contact.name ? "o " + contact.name : "e vocês"} que provavelmente está custando contatos de clientes em potencial.`,
+    `Oi, tudo bem? Trabalho com presença digital só pra advogados e vi uma oportunidade rápida no site d${contact.name ? "o " + contact.name : "e vocês"}.`,
+  ];
+  return openers[Math.floor(Math.random() * openers.length)] + " Posso te mandar o que encontrei?";
+}
+
+// conta quantos leads de prospecção este responsável já criou hoje (limite real, compartilhado via D1)
+async function refreshSentToday() {
+  const responsavel = $("responsavel").value;
+  const hoje = new Date().toISOString().slice(0, 10);
+  try {
+    const res = await api(`/api/leads?origem=prospeccao&responsavel=${encodeURIComponent(responsavel)}&desde=${hoje}`);
+    const leads = await res.json();
+    sentTodayCount = Array.isArray(leads) ? leads.length : 0;
+  } catch (e) {
+    sentTodayCount = 0;
+  }
+}
+
+function render() {
+  const list = $("queue");
+  const statsEl = $("stats");
+  if (queue.length === 0) {
+    list.innerHTML = '<li class="empty">Suba um CSV ou cole a lista acima e clique em "Gerar mensagens".</li>';
+    statsEl.style.display = "none";
+    return;
+  }
+  statsEl.style.display = "flex";
+  const cap = parseInt($("dailyCap").value, 10) || 45;
+  const remainingSlots = Math.max(0, cap - sentTodayCount - queue.filter((c) => c.done && c.justSent).length);
+
+  let unlockedCount = 0;
+  const pending = queue.filter((c) => !c.done);
+  const unlockedIds = new Set();
+  for (let i = 0; i < pending.length && unlockedCount < remainingSlots; i++) {
+    unlockedIds.add(pending[i].id);
+    unlockedCount++;
+  }
+
+  $("statTotal").textContent = queue.length;
+  $("statResp").textContent = $("responsavel").value;
+  $("statSentToday").textContent = sentTodayCount + queue.filter((c) => c.done && c.justSent).length;
+  $("statCap").textContent = cap;
+  $("statUnlocked").textContent = unlockedCount;
+
+  list.innerHTML = queue
+    .map((c, i) => {
+      const isUnlocked = c.done || unlockedIds.has(c.id);
+      const link = c.message ? `https://wa.me/${c.phone}?text=${encodeURIComponent(c.message)}` : "#";
+      const msgHtml = c.message ? c.message : '<span class="msg-preview loading">gerando mensagem...</span>';
+      return `
+      <li class="item ${c.done ? "done" : ""} ${!isUnlocked ? "locked" : ""}" data-id="${c.id}">
+        <span class="idx">${String(i + 1).padStart(2, "0")}</span>
+        <div>
+          <div class="name">${c.name || c.phone}${c.city ? " — " + c.city : ""}</div>
+          <div class="phone">${c.phone}</div>
+          <div class="msg-preview">${msgHtml}</div>
+          ${!isUnlocked ? '<div class="badge-locked">liberado amanhã (limite diário atingido)</div>' : ""}
+          ${c.duplicado ? '<div class="badge-dup">já existe um lead com este telefone</div>' : ""}
+        </div>
+        <div class="item-actions">
+          <a class="wa-btn ${isUnlocked && c.message ? "" : "disabled"}" href="${link}" target="_blank" rel="noopener">Abrir no WhatsApp</a>
+          <button class="mark" data-id="${c.id}">${c.done ? "Desmarcar" : "Marcar enviado"}</button>
+        </div>
+      </li>`;
+    })
+    .join("");
+
+  list.querySelectorAll("button.mark").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const c = queue.find((q) => q.id === id);
+      btn.disabled = true;
+      if (!c.done) {
+        await marcarEnviado(c);
+      } else {
+        c.done = false;
+        c.justSent = false;
+      }
+      render();
+    });
+  });
+}
+
+async function marcarEnviado(c) {
+  const responsavel = $("responsavel").value;
+  try {
+    const res = await api("/api/leads", {
+      method: "POST",
+      body: JSON.stringify({
+        nome: c.name || c.phone,
+        telefone: c.phone,
+        origem: "prospeccao",
+        responsavel: responsavel,
+        nota: c.message,
+      }),
+    });
+    if (res.status === 409) {
+      c.duplicado = true;
+    }
+    c.done = true;
+    c.justSent = true;
+  } catch (e) {
+    // se der erro de rede/API, ainda marca como enviado localmente pra não travar o fluxo
+    c.done = true;
+    c.justSent = true;
+  }
+}
+
+$("build").addEventListener("click", async () => {
+  const fileInput = $("csv");
+  const statusEl = $("genStatus");
+  let text = $("input").value;
+  if (fileInput.files.length > 0) text = await fileInput.files[0].text();
+
+  const rows = parseRows(text);
+  if (rows.length === 0) {
+    statusEl.textContent = "Não encontrei contatos válidos. Confira o formato (precisa de telefone com DDI).";
+    return;
+  }
+
+  await refreshSentToday();
+  queue = rows.map((r, i) => ({ id: "c" + i + "_" + Date.now(), ...r, message: "", done: false, justSent: false, duplicado: false }));
+  render();
+
+  const buildBtn = $("build");
+  buildBtn.disabled = true;
+  let generated = 0;
+  for (const c of queue) {
+    statusEl.textContent = `Gerando mensagens... ${generated}/${queue.length}`;
+    c.message = await gerarMensagem(c);
+    generated++;
+    render();
+  }
+  statusEl.textContent = `Pronto — ${generated} mensagens únicas geradas.`;
+  buildBtn.disabled = false;
+});
+
+$("clear").addEventListener("click", () => {
+  queue = [];
+  $("genStatus").textContent = "";
+  render();
+});
+
+$("dailyCap").addEventListener("input", render);
+$("responsavel").addEventListener("change", async () => { await refreshSentToday(); render(); });
+
+// ================= boot: checa sessão existente =================
+(async function boot() {
+  try {
+    const res = await fetch("/api/leads?origem=prospeccao", { headers: { "Content-Type": "application/json" } });
+    if (res.ok) {
+      $("loginOverlay").classList.remove("aberto");
+      await iniciar();
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
