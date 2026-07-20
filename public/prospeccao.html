@@ -258,20 +258,27 @@ function gerarMensagemLocal(contact, responsavel) {
     () => `reparei que sem site e com o Google Maps desatualizado, fica difícil quem pesquisa advogado${local} chegar até vocês.`,
   ];
 
-  // Apresentação pessoal — gera confiança, mostra que é gente de verdade escrevendo
+  // Apresentação pessoal — sempre com nome + cargo, gera confiança de que é gente de verdade escrevendo
   const apresentacoes = [
-    () => `Trabalho ajudando escritórios de advocacia com isso. Meu nome é ${responsavel}, sou ${cargo} da Ware Jurídico.`,
-    () => `Sou ${responsavel}, ${cargo} da Ware Jurídico — trabalhamos só com presença digital pra advogados.`,
-    () => `Meu nome é ${responsavel}, da Ware Jurídico. A gente resolve exatamente esse tipo de coisa pra escritórios de advocacia.`,
+    () => `Meu nome é ${responsavel}, ${cargo} da Ware Jurídico.`,
+    () => `Meu nome é ${responsavel}, sou ${cargo} da Ware Jurídico.`,
+    () => `Aqui é ${responsavel}, ${cargo} da Ware Jurídico.`,
   ];
 
-  // Fechamento gerando desejo — mostra o resultado desejável, não só pergunta ou oferta seca
+  // Complemento — o que a Ware faz, sempre presente pra dar contexto antes do fechamento
+  const complementos = [
+    () => `A gente resolve exatamente esse tipo de coisa pra escritórios de advocacia.`,
+    () => `Trabalhamos só com presença digital pra advogados, é basicamente o que a gente resolve.`,
+    () => `É exatamente esse tipo de situação que a gente ajuda a resolver, focado só em advocacia.`,
+  ];
+
+  // Fechamento gerando desejo — mostra o resultado desejável e convida pra conversa (nunca oferta seca)
   const fechamentos = [
-    () => `Isso normalmente representa cliente novo que nem chega a saber que vocês existem — dá pra resolver rápido. Quer que eu te mostre como?`,
-    () => `Escritórios que resolvem isso passam a receber cliente sem depender só de indicação. Faz sentido eu te explicar como funcionaria pra vocês?`,
-    () => `É algo simples de resolver, e muda bastante quem consegue te encontrar. Posso te mostrar como?`,
-    () => `Dá pra virar isso numa fonte constante de cliente novo, sem depender de indicação. Vale eu te explicar rapidinho?`,
-    () => `É rápido de ajustar e já muda quem consegue chegar até vocês pelo Google. Topa eu te mostrar como fica?`,
+    () => `Dá pra virar isso numa fonte constante de cliente novo, sem depender de indicação. Podemos conversar?`,
+    () => `Isso normalmente representa cliente novo que nem chega a saber que vocês existem — dá pra resolver rápido. Podemos bater um papo rápido sobre isso?`,
+    () => `Escritórios que resolvem isso passam a receber cliente sem depender só de indicação. Topa a gente conversar um pouco melhor sobre isso?`,
+    () => `É algo simples de resolver, e muda bastante quem consegue te encontrar. Vamos conversar?`,
+    () => `É rápido de ajustar e já muda quem consegue chegar até vocês pelo Google. Podemos marcar uma conversa rápida?`,
   ];
 
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -280,9 +287,10 @@ function gerarMensagemLocal(contact, responsavel) {
   const saudacao = pick(saudacoes);
   const observacao = pick(observacoes);
   const apresentacao = pick(apresentacoes);
+  const complemento = pick(complementos);
   const fechamento = pick(fechamentos);
 
-  const partes = [saudacao, cap(observacao), apresentacao, fechamento];
+  const partes = [saudacao, cap(observacao), apresentacao, complemento, fechamento];
   return partes.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
 }
 
