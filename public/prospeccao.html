@@ -316,8 +316,9 @@ function tratamento(contact) {
 function gerarMensagemLocal(contact, responsavel) {
   const t = tratamento(contact);
   const local = contact.city ? " em " + contact.city : "";
-  const verboTer = t.pessoa ? "tem" : "têm";
+  const verboTer = "têm";
   const cargo = responsavel === "Rebeca" ? "diretora" : "diretor";
+  const artigo = responsavel === "Rebeca" ? "a" : "o";
 
   // Saudação: único lugar onde o nome do contato aparece
   const saudacoes = [
@@ -327,36 +328,36 @@ function gerarMensagemLocal(contact, responsavel) {
     () => `Oi, tudo bem por aí?`,
   ];
 
-  // Observação: site ausente e/ou Google Maps desatualizado — varia qual(is) menciona
+  // Observação: site ausente e/ou Google Maps desatualizado — varia qual(is) menciona. Nunca repete o nome.
   const observacoes = [
-    () => `notei que ${t.pessoa ? t.sujeito : "vocês"} ainda não ${verboTer} um site.`,
-    () => `dei uma olhada rápida e vi que não aparece site${local ? local : " de vocês"} no Google.`,
+    () => `notei que vocês ainda não ${verboTer} um site.`,
+    () => `dei uma olhada rápida e vi que vocês não aparecem no Google quando alguém pesquisa advogado${local}.`,
     () => `notei que o Google Maps do escritório está desatualizado, sem site vinculado.`,
-    () => `vi que ${t.pessoa ? t.sujeito : "vocês"} ainda não ${verboTer} site, e o perfil no Google Maps também está meio parado.`,
+    () => `vi que vocês ainda não ${verboTer} site, e o perfil no Google Maps também está meio parado.`,
     () => `reparei que sem site e com o Google Maps desatualizado, fica difícil quem pesquisa advogado${local} chegar até vocês.`,
   ];
 
-  // Apresentação pessoal — sempre com nome + cargo, gera confiança de que é gente de verdade escrevendo
+  // Apresentação pessoal — sempre com nome + cargo, concordância correta
   const apresentacoes = [
     () => `Meu nome é ${responsavel}, ${cargo} da Ware Jurídico.`,
     () => `Meu nome é ${responsavel}, sou ${cargo} da Ware Jurídico.`,
-    () => `Aqui é ${responsavel}, ${cargo} da Ware Jurídico.`,
+    () => `Aqui é ${artigo} ${responsavel}, ${cargo} da Ware Jurídico.`,
   ];
 
-  // Complemento — o que a Ware faz, sempre presente pra dar contexto antes do fechamento
+  // Complemento — sempre nomeando a Ware Jurídico (soa institucional, não pessoal/informal)
   const complementos = [
-    () => `A gente resolve exatamente esse tipo de coisa pra escritórios de advocacia.`,
-    () => `Trabalhamos só com presença digital pra advogados, é basicamente o que a gente resolve.`,
-    () => `É exatamente esse tipo de situação que a gente ajuda a resolver, focado só em advocacia.`,
+    () => `É o tipo de situação que a Ware Jurídico resolve, focada só em escritórios de advocacia.`,
+    () => `A Ware Jurídico trabalha exatamente com isso, presença digital pra advogados.`,
+    () => `É basicamente o que a Ware Jurídico faz — ajudar advogado a aparecer mais no Google.`,
   ];
 
-  // Fechamento gerando desejo — mostra o resultado desejável e convida pra conversa (nunca oferta seca)
+  // Fechamento SPIN/NEPQ — pergunta de implicação que gera resposta real, nunca oferta seca ou agenda algo
   const fechamentos = [
-    () => `Dá pra virar isso numa fonte constante de cliente novo, sem depender de indicação. Podemos conversar?`,
-    () => `Isso normalmente representa cliente novo que nem chega a saber que vocês existem — dá pra resolver rápido. Podemos bater um papo rápido sobre isso?`,
-    () => `Escritórios que resolvem isso passam a receber cliente sem depender só de indicação. Topa a gente conversar um pouco melhor sobre isso?`,
-    () => `É algo simples de resolver, e muda bastante quem consegue te encontrar. Vamos conversar?`,
-    () => `É rápido de ajustar e já muda quem consegue chegar até vocês pelo Google. Podemos marcar uma conversa rápida?`,
+    () => `Isso é algo que já incomoda, ou nunca chegou a ser prioridade?`,
+    () => `Faz diferença pra vocês esse tipo de coisa, ou o boca a boca ainda dá conta?`,
+    () => `Já pensaram em resolver isso, ou nem era algo que estava no radar?`,
+    () => `Isso é um problema de verdade hoje, ou não chega a ser prioridade?`,
+    () => `Podemos conversar sobre isso — prefere por aqui mesmo ou que eu te ligue?`,
   ];
 
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -486,8 +487,17 @@ $("build").addEventListener("click", async () => {
 
   let resultado;
   const file = fileInput.files[0];
+  const ehPlanilha = file && /\.(xlsx|xls)$/i.test(file.name);
 
-  if (file && /\.(xlsx|xls)$/i.test(file.name)) {
+  if (ehPlanilha && !cidadeGlobal) {
+    statusEl.textContent = "Preencha o campo \"Cidade\" antes de gerar — a planilha do Maps não traz cidade por linha, e sem isso a mensagem sai sem referência de local.";
+    $("cidadeGlobal").focus();
+    $("cidadeGlobal").style.outline = "2px solid var(--vermelho)";
+    return;
+  }
+  $("cidadeGlobal").style.outline = "";
+
+  if (ehPlanilha) {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
     const ws = wb.Sheets[wb.SheetNames[0]];
