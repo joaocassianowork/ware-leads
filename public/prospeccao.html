@@ -320,12 +320,13 @@ function gerarMensagemLocal(contact, responsavel) {
   const cargo = responsavel === "Rebeca" ? "diretora" : "diretor";
   const artigo = responsavel === "Rebeca" ? "a" : "o";
 
-  // Saudação: único lugar onde o nome do contato aparece
+  // Saudação: único lugar onde o nome do contato aparece, e SEMPRE o primeiro bloco da mensagem
   const saudacoes = [
     () => `Oi${t.pessoa ? ", " + t.sujeito : t.sujeito !== "vocês" ? " " + t.sujeito : ""}, tudo bem?`,
     () => `Oi${t.pessoa ? " " + t.sujeito : t.sujeito !== "vocês" ? " " + t.sujeito : ""}!`,
     () => `Opa, tudo certo?`,
     () => `Oi, tudo bem por aí?`,
+    () => `Oi${t.pessoa ? ", " + t.sujeito : ""}, boa tarde!`,
   ];
 
   // Observação: site ausente e/ou Google Maps desatualizado — varia qual(is) menciona. Nunca repete o nome.
@@ -335,6 +336,8 @@ function gerarMensagemLocal(contact, responsavel) {
     () => `notei que o Google Maps do escritório está desatualizado, sem site vinculado.`,
     () => `vi que vocês ainda não ${verboTer} site, e o perfil no Google Maps também está meio parado.`,
     () => `reparei que sem site e com o Google Maps desatualizado, fica difícil quem pesquisa advogado${local} chegar até vocês.`,
+    () => `passei o olho no Google e não achei site de vocês, só o perfil do Maps.`,
+    () => `vi que quem busca advogado${local} no Google não encontra um site de vocês, só indicação mesmo.`,
   ];
 
   // Apresentação pessoal — sempre com nome + cargo, concordância correta
@@ -349,15 +352,19 @@ function gerarMensagemLocal(contact, responsavel) {
     () => `É o tipo de situação que a Ware Jurídico resolve, focada só em escritórios de advocacia.`,
     () => `A Ware Jurídico trabalha exatamente com isso, presença digital pra advogados.`,
     () => `É basicamente o que a Ware Jurídico faz — ajudar advogado a aparecer mais no Google.`,
+    () => `A Ware Jurídico só atende advocacia, então é literalmente o dia a dia da equipe.`,
+    () => `É a especialidade da Ware Jurídico — presença digital, só pra escritório de advocacia.`,
   ];
 
-  // Fechamento SPIN/NEPQ — pergunta de implicação que gera resposta real, nunca oferta seca ou agenda algo
+  // Fechamento SPIN/NEPQ — pergunta de implicação que gera resposta real, nunca oferta seca, agenda algo, ou dá saída fácil
   const fechamentos = [
     () => `Isso é algo que já incomoda, ou nunca chegou a ser prioridade?`,
     () => `Faz diferença pra vocês esse tipo de coisa, ou o boca a boca ainda dá conta?`,
     () => `Já pensaram em resolver isso, ou nem era algo que estava no radar?`,
     () => `Isso é um problema de verdade hoje, ou não chega a ser prioridade?`,
     () => `Podemos conversar sobre isso — prefere por aqui mesmo ou que eu te ligue?`,
+    () => `Isso costuma incomodar advogado, ou não é algo que passa pela cabeça de vocês?`,
+    () => `Isso já rendeu cliente perdido alguma vez, ou vocês nem percebem esse tipo de coisa?`,
   ];
 
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -369,7 +376,17 @@ function gerarMensagemLocal(contact, responsavel) {
   const complemento = pick(complementos);
   const fechamento = pick(fechamentos);
 
-  const partes = [saudacao, cap(observacao), apresentacao, complemento, fechamento];
+  // Varia a ordem dos blocos DEPOIS da saudação — a saudação sempre vem primeiro
+  const formato = Math.floor(Math.random() * 3);
+  let partes;
+  if (formato === 0) {
+    partes = [saudacao, cap(observacao), apresentacao, complemento, fechamento];
+  } else if (formato === 1) {
+    partes = [saudacao, apresentacao, cap(observacao), complemento, fechamento];
+  } else {
+    partes = [saudacao, cap(observacao), apresentacao, fechamento];
+  }
+
   return partes.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
 }
 
